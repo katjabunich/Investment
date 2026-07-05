@@ -551,8 +551,12 @@ def cmd_diff(cfg: GurusConfig, investor_name: str) -> int:
 
     prev_period, prev_path = snapshots[-2]
     curr_period, curr_path = snapshots[-1]
-    prev_df = pd.read_csv(prev_path)
-    curr_df = pd.read_csv(curr_path)
+    # cusip обязательно читаем как строку: если в файле все cusip у эмитента
+    # состоят только из цифр, pandas иначе распознает колонку как int и
+    # "съест" ведущие нули, из-за чего одинаковые cusip перестанут совпадать
+    # между периодами и diff увидит "новые"/"закрытые" там, где их нет.
+    prev_df = pd.read_csv(prev_path, dtype={"cusip": str})
+    curr_df = pd.read_csv(curr_path, dtype={"cusip": str})
 
     diff = diff_snapshots(prev_df, curr_df, cfg.significant_change_pct)
     print_diff_report(investor.name, prev_period, curr_period, curr_df, diff, cfg.significant_change_pct)

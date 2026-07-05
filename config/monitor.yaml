@@ -20,7 +20,8 @@ series:
     # Путь к CSV-файлу с историей котировок (создаётся tools/fetch_data.py).
     file: data/msci_world.csv
     # Ваш обычный ежемесячный взнос в этот инструмент, в валюте currency.
-    monthly_contribution: 300
+    # По умолчанию согласовано с monthly_contribution из config/portfolio.yaml.
+    monthly_contribution: 1000
     # Сколько кэша сейчас отложено специально под докупки на просадках.
     # Используется только для информации в выводе (не блокирует сигнал).
     cash_reserve: 3000

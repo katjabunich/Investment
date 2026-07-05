@@ -2,6 +2,9 @@
 data/cache/
 data/13f/
 
+# Личный журнал докупок на просадках (tools/monitor.py --log-purchase)
+data/dip_purchases.csv
+
 # Сгенерированные отчёты и графики
 reports/
 

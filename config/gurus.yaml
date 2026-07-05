@@ -31,16 +31,14 @@ investors:
   - name: "Baupost Group (Seth Klarman)"
     cik: "0001061768"  # уверенность средняя, сверьте перед использованием
 
-  - name: "Appaloosa Management (David Tepper)"
-    # TODO: автор не уверен в точном CIK Appaloosa Management LP.
-    # Найдите его через EDGAR company search и впишите сюда 10-значной строкой,
-    # например "0001234567".
-    cik: null
+  - name: "Appaloosa LP (David Tepper)"
+    # Сверено по EDGAR: свежие 13F Теппер подаёт как Appaloosa LP (CIK ниже).
+    # Старая структура Appaloosa Management LP имела CIK 0001006438 —
+    # для истории до ~2016 года используйте её.
+    cik: "0001656456"
 
   - name: "Duquesne Family Office (Stanley Druckenmiller)"
-    # TODO: автор не уверен в точном CIK Duquesne Family Office LLC.
-    # Найдите его через EDGAR company search и впишите сюда 10-значной строкой.
-    cik: null
+    cik: "0001536411"  # сверено по EDGAR (Duquesne Family Office LLC)
 
 # User-Agent для запросов к SEC EDGAR. SEC требует, чтобы он содержал
 # осмысленную контактную информацию (правило fair access), иначе запросы
