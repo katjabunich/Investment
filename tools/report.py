@@ -340,6 +340,21 @@ def build_html(data: dict, portfolio: dict, monitor: dict) -> str:
     src_note = ("исторические месячные данные" if src == "monthly_block_bootstrap"
                 else "встроенный резервный датасет годовых доходностей")
 
+    # Строка про налог Box 3 (если включён): показываем стоимость налога.
+    box3 = data.get("box3", {})
+    box3_note = ""
+    if box3.get("enabled"):
+        cost_real = box3.get("median_tax_cost_real_20y", 0)
+        mode = ("реформа налога на прирост с {}".format(box3.get("reform_start_year"))
+                if box3.get("model_reform")
+                else "текущий вменённый режим (реформу отложат)")
+        box3_note = (
+            f'<div class="top-sub">С учётом налога Box 3 (Нидерланды): '
+            f'все суммы показаны ПОСЛЕ налога · режим: {esc(mode)} · '
+            f'стоимость за {YEARS} лет ≈ {fmt_money(cost_real, currency)} '
+            f'по медиане (реально)</div>'
+        )
+
     css = CSS
     return f'''<!DOCTYPE html>
 <html lang="ru">
@@ -354,6 +369,7 @@ def build_html(data: dict, portfolio: dict, monitor: dict) -> str:
   <header class="top">
     <h1>Прогноз капитала</h1>
     <div class="top-sub">Монте-Карло, {fmt_int(data["params"]["n_paths"])} сценариев · источник: {src_note}</div>
+    {box3_note}
   </header>
 
   {hero}
