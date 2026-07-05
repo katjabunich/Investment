@@ -49,6 +49,7 @@ FALLBACK_COLUMNS = {
     "nasdaq100": "nasdaq100_total_return",
     "world_ex_us": "world_ex_us_total_return",
     "em": "em_total_return",
+    "small_value": "small_value_total_return",
 }
 
 N_PATHS_DEFAULT = 10_000

@@ -45,6 +45,7 @@ POSITION_COLORS = {
     "EXUS": "#1baf7a",
     "EIMI": "#eda100",
     "EQQB": "#008300",
+    "AVWS": "#4a3aa7",
 }
 FAN_BLUE = "#2a78d6"      # цвет веера прогноза
 

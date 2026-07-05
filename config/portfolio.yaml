@@ -45,31 +45,39 @@ data_sources:
   em:
     stooq: EEM.US         # iShares MSCI Emerging Markets ETF, с 2003
     yf: EEM
+  small_value:
+    stooq: IWN.US         # iShares Russell 2000 Value ETF (США, малые недооценённые), с 2000
+    yf: IWN               # сам AVWS слишком молод (2019) для длинной истории
 
 # ----------------------------------------------------------------------------
 # Состав портфеля. Веса нормируются автоматически (могут не давать ровно 1.0).
 # proxy — имя исторической серии, по которой берём доходность позиции
 # (см. data_sources выше и файлы в data/).
 #
-# Веса ниже — целевое соотношение 45/25/10/10, нормированное к 100%.
+# Целевое соотношение: 45 / 25 / 10 / 10 / 10 = 100%.
 # ----------------------------------------------------------------------------
 holdings:
   - ticker: SXR8
     name: iShares Core S&P 500 UCITS ETF (Acc)
-    weight: 0.50          # 45 из 90
+    weight: 0.45
     proxy: sp500
 
   - ticker: EXUS
     name: Xtrackers MSCI World ex USA UCITS ETF (Acc)
-    weight: 0.2778        # 25 из 90
+    weight: 0.25
     proxy: world_ex_us
 
   - ticker: EIMI
     name: iShares Core MSCI EM IMI UCITS ETF (Acc)
-    weight: 0.1111        # 10 из 90
+    weight: 0.10
     proxy: em
 
   - ticker: EQQB
     name: Invesco Nasdaq-100 UCITS ETF (Acc)
-    weight: 0.1111        # 10 из 90
+    weight: 0.10
     proxy: nasdaq100
+
+  - ticker: AVWS
+    name: Avantis Global Small Cap Value UCITS ETF (Acc)
+    weight: 0.10
+    proxy: small_value    # исторический прокси: малые недооценённые компании США
