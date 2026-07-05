@@ -21,7 +21,7 @@ series:
     file: data/msci_world.csv
     # Ваш обычный ежемесячный взнос в этот инструмент, в валюте currency.
     # По умолчанию согласовано с monthly_contribution из config/portfolio.yaml.
-    monthly_contribution: 1000
+    monthly_contribution: 2700
     # Сколько кэша сейчас отложено специально под докупки на просадках.
     # Используется только для информации в выводе (не блокирует сигнал).
     cash_reserve: 3000

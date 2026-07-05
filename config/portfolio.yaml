@@ -9,10 +9,10 @@
 base_currency: EUR
 
 # Текущая стоимость уже вложенного портфеля (сколько денег работает сейчас).
-current_value: 200000
+current_value: 187480
 
-# Ежемесячный взнос. ВНИМАНИЕ: это плейсхолдер — ЗАМЕНИТЕ на свой реальный взнос.
-monthly_contribution: 1000
+# Ежемесячный взнос.
+monthly_contribution: 2700
 
 # Ежегодная индексация взносов (рост суммы взноса каждый год).
 # 0.02 = взнос растёт на 2% в год (например, вслед за ростом дохода/инфляции).
@@ -29,39 +29,47 @@ inflation: 0.025
 # Соответствие «прокси-серия -> символ для загрузки котировок».
 # Используется скриптом fetch_data.py. Ключ — имя серии (как в holdings.proxy),
 # значение — символ на Stooq (приоритет) или тикер для yfinance-фолбэка.
-# У Stooq нет прямых индексов MSCI, поэтому берём торгуемые ETF-прокси:
-#   msci_world -> URTH.US (iShares MSCI World, торгуется на NYSE Arca)
-#                 либо SWDA.UK (iShares Core MSCI World UCITS, Лондон)
-#   sp500      -> ^spx (индекс S&P 500 на Stooq)
-# Формат: proxy_name: {stooq: <символ_stooq>, yf: <тикер_yfinance>}
+# У Stooq нет прямых индексов MSCI, поэтому для них берём торгуемые ETF-прокси
+# с самой длинной историей.
 # ----------------------------------------------------------------------------
 data_sources:
-  msci_world:
-    stooq: URTH.US        # можно заменить на SWDA.UK для UCITS-версии
-    yf: URTH
   sp500:
-    stooq: ^spx
+    stooq: ^spx           # индекс S&P 500, история с 1789 (реально с ~1928)
     yf: ^GSPC
+  nasdaq100:
+    stooq: ^ndx           # индекс Nasdaq-100, история с 1985
+    yf: ^NDX
+  world_ex_us:
+    stooq: EFA.US         # iShares MSCI EAFE ETF (развитые рынки без США), с 2001
+    yf: VEU               # Vanguard FTSE All-World ex-US как альтернатива
+  em:
+    stooq: EEM.US         # iShares MSCI Emerging Markets ETF, с 2003
+    yf: EEM
 
 # ----------------------------------------------------------------------------
-# Состав портфеля. Веса должны в сумме давать 1.0 (100%).
+# Состав портфеля. Веса нормируются автоматически (могут не давать ровно 1.0).
 # proxy — имя исторической серии, по которой берём доходность позиции
 # (см. data_sources выше и файлы в data/).
+#
+# Веса ниже — целевое соотношение 45/25/10/10, нормированное к 100%.
 # ----------------------------------------------------------------------------
 holdings:
-  # Пример: один широкий мировой ETF (accumulating UCITS).
-  - ticker: VWCE
-    name: Vanguard FTSE All-World UCITS ETF (Acc)
-    weight: 1.0
-    proxy: msci_world     # исторический прокси доходности мирового рынка акций
+  - ticker: SXR8
+    name: iShares Core S&P 500 UCITS ETF (Acc)
+    weight: 0.50          # 45 из 90
+    proxy: sp500
 
-  # --- Место для ваших правок: добавьте свои позиции по образцу выше ---
-  # Пример диверсифицированного портфеля (раскомментируйте и настройте веса):
-  # - ticker: VWCE
-  #   name: Vanguard FTSE All-World UCITS ETF (Acc)
-  #   weight: 0.8
-  #   proxy: msci_world
-  # - ticker: SXR8
-  #   name: iShares Core S&P 500 UCITS ETF (Acc)
-  #   weight: 0.2
-  #   proxy: sp500
+  - ticker: EXUS
+    name: Xtrackers MSCI World ex USA UCITS ETF (Acc)
+    weight: 0.2778        # 25 из 90
+    proxy: world_ex_us
+
+  - ticker: EIMI
+    name: iShares Core MSCI EM IMI UCITS ETF (Acc)
+    weight: 0.1111        # 10 из 90
+    proxy: em
+
+  - ticker: EQQB
+    name: Invesco Nasdaq-100 UCITS ETF (Acc)
+    weight: 0.1111        # 10 из 90
+    proxy: nasdaq100
