@@ -1,0 +1,15 @@
+# Кеш рыночных данных (скачивается локально через tools/fetch_data.py)
+data/cache/
+data/13f/
+
+# Сгенерированные отчёты и графики
+reports/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Личные конфиги с реальными цифрами (если решите не хранить их в git,
+# скопируйте config/*.yaml в config/*.local.yaml — они игнорируются)
+config/*.local.yaml
