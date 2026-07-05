@@ -1,0 +1,60 @@
+# config/gurus.yaml
+#
+# Конфигурация трекера отчётов 13F (tools/gurus.py) — список известных
+# инвесторов, чьи квартальные раскрытия портфеля (форма 13F-HR) в SEC EDGAR
+# мы отслеживаем.
+#
+# ВАЖНО про CIK (Central Index Key, идентификатор компании в EDGAR):
+#   - CIK Berkshire Hathaway указан корректно (общеизвестный, есть в задании).
+#   - Остальные CIK ниже проставлены по памяти автора и НЕ были сверены
+#     через сеть (сетевой доступ в среде разработки был заблокирован).
+#     Прежде чем полагаться на них, проверьте на странице EDGAR full-text
+#     search: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany
+#     (введите название фонда, тип формы "13F-HR").
+#   - Там, где автор не был уверен в номере, ниже стоит cik: null и
+#     TODO-комментарий — впишите правильный CIK самостоятельно, иначе
+#     tools/gurus.py пропустит такую запись с предупреждением.
+
+investors:
+  - name: "Berkshire Hathaway (Warren Buffett)"
+    cik: "0001067983"  # уверенность высокая, общеизвестный CIK
+
+  - name: "Bridgewater Associates (Ray Dalio)"
+    cik: "0001350694"  # уверенность средняя, сверьте перед использованием
+
+  - name: "Pershing Square Capital Management (Bill Ackman)"
+    cik: "0001336528"  # уверенность средняя, сверьте перед использованием
+
+  - name: "Scion Asset Management (Michael Burry)"
+    cik: "0001649339"  # уверенность средняя, сверьте перед использованием
+
+  - name: "Baupost Group (Seth Klarman)"
+    cik: "0001061768"  # уверенность средняя, сверьте перед использованием
+
+  - name: "Appaloosa Management (David Tepper)"
+    # TODO: автор не уверен в точном CIK Appaloosa Management LP.
+    # Найдите его через EDGAR company search и впишите сюда 10-значной строкой,
+    # например "0001234567".
+    cik: null
+
+  - name: "Duquesne Family Office (Stanley Druckenmiller)"
+    # TODO: автор не уверен в точном CIK Duquesne Family Office LLC.
+    # Найдите его через EDGAR company search и впишите сюда 10-значной строкой.
+    cik: null
+
+# User-Agent для запросов к SEC EDGAR. SEC требует, чтобы он содержал
+# осмысленную контактную информацию (правило fair access), иначе запросы
+# могут блокироваться. Плейсхолдер ниже — замените на свои настоящие
+# имя/контакт перед регулярным использованием.
+user_agent: "private investor katja.bunich@gmail.com"
+
+# Минимальная пауза между HTTP-запросами к SEC, в секундах.
+# Требование SEC EDGAR — не чаще 10 запросов в секунду; берём с запасом.
+request_delay_seconds: 0.5
+
+# Куда сохранять снапшоты позиций (по одному CSV на CIK+период).
+output_dir: data/13f
+
+# Порог значимого изменения доли позиции в портфеле (в процентах,
+# относительное изменение веса между двумя кварталами) для команды diff.
+significant_change_pct: 20
