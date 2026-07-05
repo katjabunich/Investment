@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -45,6 +46,9 @@ FALLBACK_CSV = DATA_DIR / "fallback_annual_returns.csv"
 FALLBACK_COLUMNS = {
     "msci_world": "msci_world_total_return",
     "sp500": "sp500_total_return",
+    "nasdaq100": "nasdaq100_total_return",
+    "world_ex_us": "world_ex_us_total_return",
+    "em": "em_total_return",
 }
 
 N_PATHS_DEFAULT = 10_000
@@ -111,7 +115,13 @@ def build_portfolio_monthly_returns(config: dict) -> pd.Series | None:
 
 
 def build_portfolio_annual_returns(config: dict) -> np.ndarray:
-    """Собрать взвешенные ГОДОВЫЕ доходности портфеля из резервного датасета."""
+    """Собрать взвешенные ГОДОВЫЕ доходности портфеля из резервного датасета.
+
+    Разные прокси начинаются в разные годы (у некоторых серий есть пропуски —
+    NaN — в ранние годы). Чтобы веса портфеля были согласованы по каждому году,
+    используем ТОЛЬКО те годы, где есть данные по ВСЕМ нужным прокси одновременно
+    (общее пересечение окон). Об этом печатается предупреждение.
+    """
     if not FALLBACK_CSV.exists():
         raise FileNotFoundError(
             f"Нет ни скачанных серий, ни резерва {FALLBACK_CSV}."
@@ -120,7 +130,8 @@ def build_portfolio_annual_returns(config: dict) -> np.ndarray:
     holdings = config.get("holdings", [])
     total_weight = sum(h["weight"] for h in holdings)
 
-    weighted = np.zeros(len(df))
+    # Определяем колонки, участвующие в портфеле, и их фактическое покрытие.
+    used_cols: list[tuple[str, float]] = []
     for h in holdings:
         proxy = h["proxy"]
         col = FALLBACK_COLUMNS.get(proxy)
@@ -128,7 +139,45 @@ def build_portfolio_annual_returns(config: dict) -> np.ndarray:
             # Неизвестный прокси в резерве — используем мировой рынок как замену.
             col = "msci_world_total_return"
         w = h["weight"] / total_weight
-        weighted += w * df[col].astype(float).to_numpy()
+        used_cols.append((col, w))
+
+    unique_cols = sorted({c for c, _ in used_cols})
+    # Маска годов, где по ВСЕМ нужным колонкам есть данные (нет NaN).
+    complete = df[unique_cols].notna().all(axis=1)
+    sub = df.loc[complete].reset_index(drop=True)
+    if sub.empty:
+        raise ValueError(
+            "В резервном датасете нет ни одного года с данными по всем "
+            f"прокси портфеля: {unique_cols}"
+        )
+
+    # Диагностика: какой год стал общим стартом и из-за какой(их) серии(й).
+    full_start = int(df["year"].iloc[0])
+    used_start = int(sub["year"].iloc[0])
+    used_end = int(sub["year"].iloc[-1])
+    n_years = len(sub)
+    if used_start > full_start:
+        # Ищем прокси, которые «обрезали» историю (их первый непустой год позже).
+        latecomers = []
+        for col in unique_cols:
+            first_valid = df.loc[df[col].notna(), "year"]
+            if not first_valid.empty and int(first_valid.iloc[0]) == used_start:
+                latecomers.append(col)
+        why = ", ".join(latecomers) if latecomers else "нехватка ранних данных"
+        print(
+            f"ВНИМАНИЕ: годовая история портфеля используется с {used_start} "
+            f"по {used_end} ({n_years} лет).\n"
+            f"  Более ранние годы ({full_start}-{used_start - 1}) отброшены, "
+            f"т.к. по части прокси нет данных (позже всех начинается: {why})."
+        )
+    else:
+        print(
+            f"Годовая история портфеля: {used_start}-{used_end} ({n_years} лет)."
+        )
+
+    weighted = np.zeros(len(sub))
+    for col, w in used_cols:
+        weighted += w * sub[col].astype(float).to_numpy()
     return weighted
 
 
@@ -361,6 +410,94 @@ def make_fan_chart(
     print(f"\nГрафик-веер сохранён: {out_path}")
 
 
+def _percentile_dict(values: np.ndarray) -> dict:
+    """Вернуть словарь {p5,p25,p50,p75,p95} перцентилей для массива значений."""
+    pct = np.percentile(values, PERCENTILES)
+    return {f"p{p}": float(round(v, 2)) for p, v in zip(PERCENTILES, pct)}
+
+
+def export_json(
+    config: dict, capital: np.ndarray, deflate: np.ndarray, years: int,
+    n_paths: int, seed: int | None, monthly_contribution: float,
+    goal: float | None, used_monthly: bool, out_path: Path,
+) -> None:
+    """Сохранить результаты симуляции в машиночитаемый JSON.
+
+    Структура: params, milestones (перцентили по каждому году 1..N в номинале и
+    реале), goal (вероятности достижения), naive (наивные прогнозы под 5% и 7%),
+    contributed_total и fan (перцентили реального капитала по каждому году 0..N).
+    """
+    currency = config.get("base_currency", "EUR")
+
+    # Вехи — по каждому году горизонта (1..N): номинал и реал.
+    milestones = []
+    for y in range(1, years + 1):
+        col = y * 12
+        nominal = capital[:, col]
+        real = nominal * deflate[col]
+        milestones.append({
+            "year": y,
+            "nominal": _percentile_dict(nominal),
+            "real": _percentile_dict(real),
+        })
+
+    # Вероятность достижения цели к концу горизонта.
+    goal_block = None
+    if goal is not None:
+        final_nom = capital[:, years * 12]
+        final_real = final_nom * deflate[years * 12]
+        goal_block = {
+            "amount": float(goal),
+            "prob_nominal": float(round((final_nom >= goal).mean() * 100, 2)),
+            "prob_real": float(round((final_real >= goal).mean() * 100, 2)),
+        }
+
+    # Веер — перцентили РЕАЛЬНОГО капитала по каждому году 0..N.
+    fan_years = list(range(years + 1))
+    fan: dict = {"years": fan_years}
+    for p in PERCENTILES:
+        fan[f"real_p{p}"] = []
+    for y in fan_years:
+        col = y * 12
+        real = capital[:, col] * deflate[col]
+        pct = np.percentile(real, PERCENTILES)
+        for p, v in zip(PERCENTILES, pct):
+            fan[f"real_p{p}"].append(float(round(v, 2)))
+
+    result = {
+        "params": {
+            "base_currency": currency,
+            "current_value": float(config["current_value"]),
+            "monthly_contribution": float(monthly_contribution),
+            "annual_contribution_growth": float(
+                config.get("annual_contribution_growth", 0.0)),
+            "inflation": float(config.get("inflation", 0.0)),
+            "years": int(years),
+            "n_paths": int(n_paths),
+            "seed": seed,
+            "return_source": "monthly_block_bootstrap" if used_monthly
+            else "annual_bootstrap_fallback",
+        },
+        "milestones": milestones,
+        "goal": goal_block,
+        "naive": {
+            "rate5": float(round(
+                naive_projection(config, years, monthly_contribution, 0.05), 2)),
+            "rate7": float(round(
+                naive_projection(config, years, monthly_contribution, 0.07), 2)),
+        },
+        "contributed_total": float(round(
+            total_contributed(config, years, monthly_contribution), 2)),
+        "fan": fan,
+    }
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(result, fh, ensure_ascii=False, indent=2)
+    print(f"\nJSON-результаты сохранены: {out_path}")
+
+
 # ---------------------------------------------------------------------------
 # Оркестрация
 # ---------------------------------------------------------------------------
@@ -445,6 +582,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="Целевая сумма для оценки вероятности достижения.")
     parser.add_argument("--compare", type=str, default=None,
                         help="Сравнить взносы, напр. --compare 500,1000,2000")
+    parser.add_argument("--json", type=str, default=None, dest="json_path",
+                        help="Сохранить результаты симуляции в JSON по этому пути.")
     return parser.parse_args(argv)
 
 
@@ -494,6 +633,12 @@ def main(argv: list[str] | None = None) -> int:
         capital, years, currency, REPORTS_DIR / "forecast_fan.png",
         base_contribution,
     )
+    if args.json_path:
+        export_json(
+            config, capital, deflator(config, years), years, n_paths,
+            args.seed, base_contribution, args.goal, used_monthly,
+            Path(args.json_path),
+        )
     print("\nГотово. Помните: прошлые доходности не гарантируют будущих.")
     return 0
 
