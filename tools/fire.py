@@ -4,22 +4,31 @@
 
 Инструмент отвечает на вопрос: через сколько лет можно прекратить полноценно
 работать (перестать вносить взносы и начать снимать деньги на жизнь), чтобы с
-достаточной вероятностью портфеля хватило до глубокой старости.
+достаточной вероятностью капитала хватило до глубокой старости.
 
 Метод — тот же Монте-Карло движок, что и в tools/forecast.py: генерация матрицы
 месячных доходностей (блочный бутстрэп или годовой резерв) и налог Box 3
 переиспользуются напрямую (импорт, не копипаст).
 
-Модель:
-  * Перебирается «год перехода» T = 1..20. До года T включительно человек вносит
-    ежемесячный взнос (с ежегодной индексацией). После года T взносы прекращаются
-    и начинаются ежемесячные изъятия на жизнь.
-  * Чистое изъятие = (расходы − подработка), задаётся в СЕГОДНЯШНИХ ценах и
-    индексируется инфляцией (реальная величина постоянна). Подработка длится до
-    возраста part_time_until_age; после — изъятие равно полным расходам.
-  * Налог Box 3 продолжает считаться каждый год и в фазе изъятий (по стоимости
-    портфеля на начало года).
-  * Путь считается успешным, если портфель оставался > 0 вплоть до life_expectancy.
+Модель (три источника пассивного дохода поверх ликвидного портфеля):
+  * Перебирается «год перехода» T = 1..20. До года T включительно вносятся
+    ежемесячные взносы (с ежегодной индексацией). После года T взносы
+    прекращаются и начинаются изъятия на жизнь.
+  * Ликвидное ведро (IBKR, Box 3): взносы до перехода, изъятия после, налог
+    Box 3 считается каждый год (в т.ч. в фазе изъятий).
+  * Чистое ежемесячное изъятие после T = расходы − активные side_income
+    (по возрасту) − (с 68) AOW − (с 68) нетто-аннуитет lijfrente. Не ниже нуля;
+    излишек в ликвидное НЕ докладываем (консервативно). Всё в СЕГОДНЯШНИХ ценах,
+    изъятие индексируется инфляцией (реальная величина постоянна).
+  * Lijfrente-ведро (если включено): взносы до T, рост по тем же путям
+    доходностей, БЕЗ Box 3; возврат налога от вычета докладывается в ликвидное
+    ведро (до T). На 68 капитал конвертируется в аннуитет 68..payout_end_age
+    (реальная ставка 1,5%), нетто = выплата × (1 − payout_tax_rate).
+  * Успех пути = ликвидное ведро оставалось > 0 вплоть до life_expectancy.
+
+Прогоняются два сценария распределения одного и того же взноса «из кармана»:
+  * A — весь взнос в ликвидное ведро, lijfrente выключен;
+  * B — часть взноса в lijfrente (+возврат налога в ликвидное), остальное как A.
 
 Пример:
     python3 tools/fire.py --json reports/fire_results.json
@@ -36,12 +45,10 @@ from pathlib import Path
 import numpy as np
 
 # Переиспользуем движок forecast.py: конфиг, источник доходностей, генерацию
-# матрицы доходностей, налог Box 3, вектор взносов и форматирование сумм.
+# матрицы доходностей, налог Box 3 и форматирование сумм.
 from forecast import (  # noqa: E402
-    REPORTS_DIR,
     SIM_START_YEAR,
     _box3_year_tax,
-    _contribution_vector,
     _fmt,
     _generate_return_matrix,
     load_config,
@@ -50,20 +57,63 @@ from forecast import (  # noqa: E402
 )
 
 N_PATHS_DEFAULT = 10_000
-SWITCH_YEARS_MAX = 20          # перебираем переход через 1..20 лет
-MILESTONE_SWITCH_YEARS = [5, 10, 15]  # для сводки P(успех) через 5/10/15 лет
+SWITCH_YEARS_MAX = 20                    # перебираем переход через 1..20 лет
+MILESTONE_SWITCH_YEARS = [5, 10, 15]     # для сводки P(успех) через 5/10/15 лет
 SEED_DEFAULT = 42
+THRESHOLDS = [0.85, 0.75]                # пороги надёжности для «самого раннего года»
+LIJFRENTE_REAL_RATE = 0.015              # реальная ставка аннуитета lijfrente (68..end)
 
 
 # ---------------------------------------------------------------------------
-# Симуляция одной комбинации (сценарий расходов × подработка × год перехода)
+# Предрасчёт пассивных доходов свободной фазы (в СЕГОДНЯШНИХ ценах, нетто)
+# ---------------------------------------------------------------------------
+def _side_income_by_month(config: dict, n_months: int) -> np.ndarray:
+    """Вектор суммы активных side_income по каждому месяцу (сегодняшние цены).
+
+    Каждый поток длится, пока возраст < until_age. Возраст в месяце m =
+    current_age + m//12 (сравнение по границе месяцев: m < (until_age-age)*12).
+    """
+    fire = config["fire"]
+    current_age = int(fire["current_age"])
+    out = np.zeros(n_months, dtype=float)
+    for stream in fire.get("side_income", []):
+        monthly = float(stream["monthly"])
+        cutoff_m = (int(stream["until_age"]) - current_age) * 12
+        hi = max(0, min(cutoff_m, n_months))
+        out[:hi] += monthly
+    return out
+
+
+def _aow_by_month(config: dict, n_months: int) -> np.ndarray:
+    """Вектор нетто-AOW по каждому месяцу (сегодняшние цены).
+
+    Если aow.enabled=false — нули (возврат к «старой» модели без AOW).
+    Начинается с месяца (start_age − current_age)*12.
+    """
+    fire = config["fire"]
+    aow = fire.get("aow", {})
+    out = np.zeros(n_months, dtype=float)
+    if not aow.get("enabled", False):
+        return out
+    current_age = int(fire["current_age"])
+    start_m = (int(aow["start_age"]) - current_age) * 12
+    monthly = float(aow["monthly_amount"]) * float(aow.get("fraction", 1.0))
+    lo = max(0, min(start_m, n_months))
+    out[lo:] += monthly
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Симуляция одной комбинации (сценарий A/B × расходы × год перехода)
 # ---------------------------------------------------------------------------
 def simulate_fire_path_success(
     config: dict,
     ret: np.ndarray,
     box3: dict | None,
     expenses_month: float,
-    part_time_month: float,
+    liquid_contrib: float,
+    lijfrente_enabled: bool,
+    lijfrente_contrib: float,
     switch_year_T: int,
 ) -> float:
     """Вероятность успеха для одного «года перехода» T.
@@ -71,47 +121,71 @@ def simulate_fire_path_success(
     ret — заранее сгенерированная матрица месячных доходностей (n_paths, n_months),
     одна и та же для всех T и сценариев (сопоставимость на общих путях).
 
-    Логика по месяцам m (0-based):
-      * m < T*12  — фаза накопления: в начале месяца вносится взнос (индексация
-        annual_contribution_growth), затем начисляется месячная доходность;
-      * m >= T*12 — фаза изъятий: в начале месяца изымается (расходы − подработка)
-        в сегодняшних ценах, домноженные на инфляционный множитель (реальная
-        величина изъятия постоянна), затем начисляется доходность.
-    В конце каждого 12-месячного года вычитается налог Box 3 (по стоимости на
-    начало года). Путь помечается провальным, как только капитал станет <= 0.
-    Возвращает долю успешных путей (портфель > 0 до конца горизонта).
+    По месяцам m (0-based):
+      * m < T*12 — накопление: в начале месяца в ликвидное ведро вносится взнос
+        (индексация annual_contribution_growth); если lijfrente включён — ещё и
+        возврат налога от его вычета. В lijfrente-ведро идёт свой взнос. Затем
+        обоим ведрам начисляется месячная доходность пути.
+      * m >= T*12 — изъятия: чистое изъятие = расходы − side_income − AOW −
+        нетто-аннуитет lijfrente (всё в сегодняшних ценах), не ниже нуля,
+        домноженное на инфляционный множитель. Взносы прекращаются.
+    В конце каждого 12-месячного года из ЛИКВИДНОГО ведра вычитается налог Box 3
+    (lijfrente от Box 3 освобождён). Путь провален, как только ликвидное <= 0.
     """
     n_paths, n_months = ret.shape
     fire = config["fire"]
     current_age = int(fire["current_age"])
-    part_until = int(fire["part_time_until_age"])
 
     start_value = float(config["current_value"])
     infl = float(config.get("inflation", 0.0))
     monthly_infl = (1.0 + infl) ** (1.0 / 12.0) - 1.0
     g = float(config.get("annual_contribution_growth", 0.0))
-    base_contrib = float(config["monthly_contribution"])
 
     switch_m = switch_year_T * 12
-    # Подработка длится, пока возраст < part_until (в месяцах от старта).
-    cutoff_m = (part_until - current_age) * 12
+
+    # Пассивные доходы свободной фазы (сегодняшние цены, нетто) — векторы по месяцам.
+    side_month = _side_income_by_month(config, n_months)
+    aow_month = _aow_by_month(config, n_months)
+
+    # Параметры lijfrente-аннуитета (пенсионный возраст берём из aow.start_age = 68).
+    lijf = fire.get("lijfrente", {})
+    pension_age = int(fire.get("aow", {}).get("start_age", 68))
+    payout_start_m = (pension_age - current_age) * 12
+    payout_end_m = (int(lijf.get("payout_end_age", 95)) - current_age) * 12
+    payout_tax = float(lijf.get("payout_tax_rate", 0.0))
+    refund_rate = float(lijf.get("tax_refund_rate", 0.0))
+    n_pay = max(1, payout_end_m - payout_start_m)
+    r_m = (1.0 + LIJFRENTE_REAL_RATE) ** (1.0 / 12.0) - 1.0
+    annuity_factor = (r_m / (1.0 - (1.0 + r_m) ** (-n_pay))) if r_m > 0 else 1.0 / n_pay
+    # Множитель перевода номинала на момент 68 в сегодняшние (реальные) деньги.
+    deflate_payout = 1.0 / (1.0 + monthly_infl) ** payout_start_m
 
     value = np.full(n_paths, start_value, dtype=float)
     failed = np.zeros(n_paths, dtype=bool)
-    v_year_start = value.copy()  # стоимость на начало текущего года
+    v_year_start = value.copy()          # ликвидное на начало текущего года
+
+    lij_value = np.zeros(n_paths, dtype=float)   # lijfrente-ведро
+    lijf_net = 0.0                               # нетто-аннуитет (скаляр 0 или вектор)
+    annuitized = False
 
     for m in range(n_months):
+        # --- Ликвидное ведро: денежный поток месяца ---
         if m < switch_m:
-            # Взнос (положительный денежный поток).
-            cash = base_contrib * (1.0 + g) ** (m // 12)
+            cash = liquid_contrib * (1.0 + g) ** (m // 12)
+            if lijfrente_enabled:
+                # Возврат налога от вычета lijfrente докладывается в ликвидное.
+                cash += lijfrente_contrib * (1.0 + g) ** (m // 12) * refund_rate
         else:
-            # Изъятие (отрицательный поток), индексированное инфляцией.
-            pt = part_time_month if m < cutoff_m else 0.0
-            net_real = expenses_month - pt
+            in_payout = lijfrente_enabled and payout_start_m <= m < payout_end_m
+            lijf_pay = lijf_net if in_payout else 0.0
+            net_real = np.maximum(
+                0.0, expenses_month - side_month[m] - aow_month[m] - lijf_pay
+            )
             cash = -net_real * (1.0 + monthly_infl) ** m
 
         value = (value + cash) * (1.0 + ret[:, m])
 
+        # --- Налог Box 3 (только ликвидное ведро) в конце года ---
         if box3 is not None and (m + 1) % 12 == 0:
             sim_year = (m + 1) // 12
             cal_year = SIM_START_YEAR + sim_year
@@ -124,6 +198,18 @@ def simulate_fire_path_success(
 
         failed |= value <= 0.0
 
+        # --- Lijfrente-ведро: рост и конвертация в аннуитет на 68 ---
+        if lijfrente_enabled and not annuitized:
+            lij_cash = (
+                lijfrente_contrib * (1.0 + g) ** (m // 12) if m < switch_m else 0.0
+            )
+            lij_value = (lij_value + lij_cash) * (1.0 + ret[:, m])
+            if (m + 1) == payout_start_m:
+                # Капитал на начало 68-го года -> реальный аннуитет 68..end.
+                k_real = lij_value * deflate_payout
+                lijf_net = k_real * annuity_factor * (1.0 - payout_tax)
+                annuitized = True
+
     return float((~failed).mean())
 
 
@@ -131,23 +217,26 @@ def run_scenario(
     config: dict,
     ret: np.ndarray,
     box3: dict | None,
+    scenario: dict,
     expenses_month: float,
-    part_time_month: float,
-    threshold: float,
+    thresholds: list[float],
 ) -> dict:
-    """Прогнать один сценарий (расходы × подработка) по всем годам перехода 1..20.
+    """Прогнать один сценарий (A/B) при одном уровне расходов по всем T = 1..20.
 
-    Возвращает словарь: expenses, part_time, by_switch_year (список по T),
-    earliest_ok (самый ранний T с P(успех) >= threshold, либо None).
+    scenario — dict с ключами key, label, liquid_contrib, lijfrente_enabled,
+    lijfrente_contrib. Возвращает by_switch_year (список по T) и earliest —
+    словарь {порог: самый ранний T с P(успех) >= порога, либо None}.
     """
     fire = config["fire"]
     current_age = int(fire["current_age"])
 
     by_switch_year = []
-    earliest_ok = None
+    earliest: dict[str, dict | None] = {f"{t:.2f}": None for t in thresholds}
     for T in range(1, SWITCH_YEARS_MAX + 1):
         p = simulate_fire_path_success(
-            config, ret, box3, expenses_month, part_time_month, T
+            config, ret, box3, expenses_month,
+            scenario["liquid_contrib"], scenario["lijfrente_enabled"],
+            scenario["lijfrente_contrib"], T,
         )
         rec = {
             "T": T,
@@ -156,14 +245,20 @@ def run_scenario(
             "p_success": round(p, 4),
         }
         by_switch_year.append(rec)
-        if earliest_ok is None and p >= threshold:
-            earliest_ok = dict(rec)
+        for t in thresholds:
+            key = f"{t:.2f}"
+            if earliest[key] is None and p >= t:
+                earliest[key] = dict(rec)
 
     return {
+        "scenario_key": scenario["key"],
+        "scenario_label": scenario["label"],
         "expenses": expenses_month,
-        "part_time": part_time_month,
+        "liquid_contribution": scenario["liquid_contrib"],
+        "lijfrente_enabled": scenario["lijfrente_enabled"],
+        "lijfrente_contribution": scenario["lijfrente_contrib"],
         "by_switch_year": by_switch_year,
-        "earliest_ok": earliest_ok,
+        "earliest_ok": earliest,
     }
 
 
@@ -178,103 +273,112 @@ def _p_at(by_switch_year: list[dict], T: int) -> dict | None:
     return None
 
 
+def _earliest_txt(earliest: dict, t: float, currency: str) -> str:
+    """Текстовое описание самого раннего года перехода для порога t."""
+    eo = earliest.get(f"{t:.2f}")
+    if eo is None:
+        return f"за {SWITCH_YEARS_MAX} лет не достигается"
+    return (f"через {eo['T']} лет — {eo['calendar_year']}, возраст {eo['age']} "
+            f"(P = {eo['p_success']*100:.1f}%)")
+
+
 def print_report(
-    config: dict, scenarios: list[dict], threshold: float,
-    n_paths: int, seed: int, box3: dict | None,
+    config: dict, results: list[dict], scenario_defs: list[dict],
+    thresholds: list[float], n_paths: int, seed: int, box3: dict | None,
 ) -> None:
-    """Напечатать компактный отчёт по всем сценариям на русском."""
+    """Напечатать сравнительный отчёт A vs B по всем уровням расходов (на русском)."""
     fire = config["fire"]
     currency = config.get("base_currency", "EUR")
     current_age = int(fire["current_age"])
     life_exp = int(fire["life_expectancy"])
     horizon = life_exp - current_age
     infl = float(config.get("inflation", 0.0))
-    pt_until = int(fire["part_time_until_age"])
+    aow = fire.get("aow", {})
 
-    print("=" * 72)
-    print("FIRE-КАЛЬКУЛЯТОР: когда можно перестать полноценно работать")
-    print("=" * 72)
+    print("=" * 78)
+    print("FIRE-КАЛЬКУЛЯТОР: когда можно перестать полноценно работать (A vs B)")
+    print("=" * 78)
     print(
         f"Профиль: возраст {current_age}, портфель {_fmt(config['current_value'])} "
-        f"{currency}, взнос {_fmt(config['monthly_contribution'])} {currency}/мес "
-        f"(+{config.get('annual_contribution_growth', 0)*100:.0f}%/год)"
+        f"{currency}, взнос «из кармана» {_fmt(config['monthly_contribution'])} "
+        f"{currency}/мес (+{config.get('annual_contribution_growth', 0)*100:.0f}%/год)"
     )
-    print(f"Инфляция: {infl*100:.1f}%/год | подработка длится до {pt_until} лет")
+    # Пассивные доходы свободной фазы.
+    streams = ", ".join(
+        f"{s['name']} {_fmt(s['monthly'])} до {s['until_age']}"
+        for s in fire.get("side_income", [])
+    )
+    print(f"Side income (нетто, сегодня): {streams}")
+    if aow.get("enabled", False):
+        aow_net = float(aow["monthly_amount"]) * float(aow.get("fraction", 1.0))
+        print(
+            f"AOW: с {aow['start_age']} лет, {_fmt(aow_net)} {currency}/мес нетто "
+            f"(={_fmt(aow['monthly_amount'])} × {aow.get('fraction', 1.0)})"
+        )
+    else:
+        print("AOW: выключен (старая модель)")
+    print(f"Инфляция: {infl*100:.1f}%/год")
     if box3 is not None:
         mode = ("реформа с {}".format(box3["reform_start_year"])
                 if box3.get("model_reform") else "текущий вменённый режим")
-        print(f"Налог Box 3: ВКЛЮЧЁН ({mode})")
+        print(f"Налог Box 3: ВКЛЮЧЁН на ликвидном ведре ({mode})")
     else:
         print("Налог Box 3: выключен")
     print(
         f"Дожитие до {life_exp} лет ({horizon} лет от сегодня) | "
         f"путей: {n_paths:,}".replace(",", " ")
-        + f" | seed: {seed} | порог успеха: {threshold*100:.0f}%"
+        + f" | seed: {seed}"
     )
-    print(
-        "Расходы/подработка заданы в СЕГОДНЯШНИХ ценах (изъятия индексируются "
-        "инфляцией)."
-    )
+    print("Сценарии распределения одного и того же взноса «из кармана»:")
+    for sc in scenario_defs:
+        lij = (f"+ lijfrente {_fmt(sc['lijfrente_contrib'])} (+возврат налога в ликвидное)"
+               if sc["lijfrente_enabled"] else "lijfrente выключен")
+        print(f"  {sc['key']}: ликвидно {_fmt(sc['liquid_contrib'])} {currency}/мес, {lij}")
 
-    for sc in scenarios:
-        pt = sc["part_time"]
-        pt_label = (f"подработка {_fmt(pt)} {currency}/мес"
-                    if pt > 0 else "БЕЗ подработки (полный FIRE)")
-        print("\n" + "-" * 72)
-        print(f"Расходы {_fmt(sc['expenses'])} {currency}/мес | {pt_label}")
-        print("-" * 72)
-        for T in MILESTONE_SWITCH_YEARS:
-            rec = _p_at(sc["by_switch_year"], T)
-            if rec is None:
-                continue
-            print(
-                f"  Переход через {T:>2} лет (в {rec['calendar_year']}, "
-                f"возраст {rec['age']}): P(успех) = {rec['p_success']*100:5.1f}%"
-            )
-        eo = sc["earliest_ok"]
-        if eo is not None:
-            print(
-                f"  ==> Самый ранний год перехода с P >= {threshold*100:.0f}%: "
-                f"через {eo['T']} лет — в {eo['calendar_year']}, возраст "
-                f"{eo['age']} (P = {eo['p_success']*100:.1f}%)"
-            )
-        else:
-            last = sc["by_switch_year"][-1]
-            print(
-                f"  ==> За {SWITCH_YEARS_MAX} лет порог {threshold*100:.0f}% не "
-                f"достигается (максимум P = {last['p_success']*100:.1f}% при "
-                f"переходе через {last['T']} лет)"
-            )
+    # Сгруппировать по расходам, показать A и B рядом.
+    expenses_list = sorted({r["expenses"] for r in results})
+    for expenses in expenses_list:
+        print("\n" + "-" * 78)
+        print(f"РАСХОДЫ {_fmt(expenses)} {currency}/мес (сегодня)")
+        print("-" * 78)
+        for sc in scenario_defs:
+            res = next(r for r in results
+                       if r["expenses"] == expenses and r["scenario_key"] == sc["key"])
+            print(f"  [{sc['key']}] {sc['label']}")
+            for T in MILESTONE_SWITCH_YEARS:
+                rec = _p_at(res["by_switch_year"], T)
+                if rec is None:
+                    continue
+                print(
+                    f"      Переход через {T:>2} лет ({rec['calendar_year']}, "
+                    f"возраст {rec['age']}): P(успех) = {rec['p_success']*100:5.1f}%"
+                )
+            for t in thresholds:
+                print(f"      Ранний год P>={t*100:.0f}%: {_earliest_txt(res['earliest_ok'], t, currency)}")
 
-    # Понятная сводка по всем комбинациям.
-    print("\n" + "=" * 72)
-    print("СВОДКА (простыми словами)")
-    print("=" * 72)
-    for sc in scenarios:
-        pt = sc["part_time"]
-        eo = sc["earliest_ok"]
-        pt_txt = (f"подработке {_fmt(pt)} {currency}" if pt > 0
-                  else "без подработки")
-        if eo is not None:
-            print(
-                f"  При расходах {_fmt(sc['expenses'])} {currency} и {pt_txt}: "
-                f"можно в {eo['calendar_year']} (возраст {eo['age']}), "
-                f"вероятность успеха {eo['p_success']*100:.0f}%."
+    # Итоговая сводка простыми словами.
+    print("\n" + "=" * 78)
+    print("СВОДКА: во сколько можно «выйти» (порог 85%), A vs B")
+    print("=" * 78)
+    for expenses in expenses_list:
+        parts = []
+        for sc in scenario_defs:
+            res = next(r for r in results
+                       if r["expenses"] == expenses and r["scenario_key"] == sc["key"])
+            eo = res["earliest_ok"]["0.85"]
+            parts.append(
+                f"{sc['key']}: {eo['calendar_year']} (возраст {eo['age']})"
+                if eo is not None else f"{sc['key']}: недостижимо за {SWITCH_YEARS_MAX} лет"
             )
-        else:
-            print(
-                f"  При расходах {_fmt(sc['expenses'])} {currency} и {pt_txt}: "
-                f"за {SWITCH_YEARS_MAX} лет надёжно (>= {threshold*100:.0f}%) "
-                f"выйти не получается."
-            )
+        print(f"  Расходы {_fmt(expenses)} {currency}: " + " | ".join(parts))
 
 
 def export_json(
-    config: dict, scenarios: list[dict], threshold: float,
-    n_paths: int, seed: int, used_monthly: bool, box3: dict | None,
-    out_path: Path,
+    config: dict, results: list[dict], scenario_defs: list[dict],
+    thresholds: list[float], n_paths: int, seed: int, used_monthly: bool,
+    box3: dict | None, out_path: Path,
 ) -> None:
-    """Сохранить результаты в машиночитаемый JSON."""
+    """Сохранить результаты в машиночитаемый JSON (каждый сценарий с scenario_label)."""
     fire = config["fire"]
     result = {
         "params": {
@@ -287,17 +391,19 @@ def export_json(
             "annual_contribution_growth": float(
                 config.get("annual_contribution_growth", 0.0)),
             "inflation": float(config.get("inflation", 0.0)),
-            "part_time_income": float(fire["part_time_income"]),
-            "part_time_until_age": int(fire["part_time_until_age"]),
-            "success_threshold": float(threshold),
+            "side_income": fire.get("side_income", []),
+            "aow": fire.get("aow", {}),
+            "lijfrente": fire.get("lijfrente", {}),
+            "thresholds": thresholds,
             "n_paths": int(n_paths),
             "seed": seed,
             "base_year": SIM_START_YEAR,
             "return_source": "monthly_block_bootstrap" if used_monthly
             else "annual_bootstrap_fallback",
             "box3_enabled": box3 is not None,
+            "scenario_defs": scenario_defs,
         },
-        "scenarios": scenarios,
+        "scenarios": results,
     }
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -309,6 +415,33 @@ def export_json(
 # ---------------------------------------------------------------------------
 # Оркестрация
 # ---------------------------------------------------------------------------
+def build_scenario_defs(config: dict) -> list[dict]:
+    """Построить определения сценариев A и B из конфига.
+
+    A — весь взнос в ликвидное ведро, lijfrente выключен.
+    B — часть взноса (lijfrente.monthly_contribution) в lijfrente, остальное в
+        ликвидное; возврат налога докладывается в ликвидное (внутри симуляции).
+    """
+    total = float(config["monthly_contribution"])
+    lij_contrib = float(config["fire"]["lijfrente"]["monthly_contribution"])
+    return [
+        {
+            "key": "A",
+            "label": "весь взнос в ликвидное, lijfrente выключен",
+            "liquid_contrib": total,
+            "lijfrente_enabled": False,
+            "lijfrente_contrib": 0.0,
+        },
+        {
+            "key": "B",
+            "label": f"{_fmt(total - lij_contrib)} ликвидно + {_fmt(lij_contrib)} lijfrente",
+            "liquid_contrib": total - lij_contrib,
+            "lijfrente_enabled": True,
+            "lijfrente_contrib": lij_contrib,
+        },
+    ]
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Разобрать аргументы командной строки."""
     parser = argparse.ArgumentParser(
@@ -338,16 +471,12 @@ def main(argv: list[str] | None = None) -> int:
 
     n_paths = args.paths
     seed = args.seed
-    threshold = float(fire["success_threshold"])
     life_exp = int(fire["life_expectancy"])
     current_age = int(fire["current_age"])
     years = life_exp - current_age
 
-    part_time = float(fire["part_time_income"])
     expenses_list = [float(x) for x in fire["expenses_scenarios"]]
-    # 6 комбинаций: каждый уровень расходов × {с подработкой, без подработки}.
-    combos = [(e, part_time) for e in expenses_list] + \
-             [(e, 0.0) for e in expenses_list]
+    scenario_defs = build_scenario_defs(config)
 
     box3 = resolve_box3(config, args.no_box3)
     monthly_src, annual_src, used_monthly = resolve_return_source(config)
@@ -355,21 +484,22 @@ def main(argv: list[str] | None = None) -> int:
         print("ВНИМАНИЕ: скачанных месячных серий нет — использую ГОДОВОЙ резерв "
               "(data/fallback_annual_returns.csv, приближение).")
 
-    # Матрица доходностей генерируется ОДИН раз и переиспользуется для всех T и
-    # сценариев — так пути сопоставимы, а расчёт быстр.
+    # Матрица доходностей генерируется ОДИН раз и переиспользуется для всех T,
+    # сценариев и уровней расходов — так пути сопоставимы, а расчёт быстр.
     rng = np.random.default_rng(seed)
     ret = _generate_return_matrix(years, n_paths, rng, monthly_src, annual_src)
 
-    scenarios = []
-    for expenses_month, pt_month in combos:
-        scenarios.append(
-            run_scenario(config, ret, box3, expenses_month, pt_month, threshold)
-        )
+    results = []
+    for expenses in expenses_list:
+        for sc in scenario_defs:
+            results.append(
+                run_scenario(config, ret, box3, sc, expenses, THRESHOLDS)
+            )
 
-    print_report(config, scenarios, threshold, n_paths, seed, box3)
+    print_report(config, results, scenario_defs, THRESHOLDS, n_paths, seed, box3)
 
     if args.json_path:
-        export_json(config, scenarios, threshold, n_paths, seed,
+        export_json(config, results, scenario_defs, THRESHOLDS, n_paths, seed,
                     used_monthly, box3, Path(args.json_path))
 
     elapsed = time.perf_counter() - t0
