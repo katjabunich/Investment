@@ -229,6 +229,71 @@ check("доля доплат в три месяца поездок", top_trip / 
 note("в июне доплатили 751 при тратах за границей 733 — почти евро в евро")
 
 # ---------------------------------------------------------------------------
+# 11. ПОТОЛОК ТРАТ И LIJFRENTE ИЗ ПРЕМИЙ
+# ---------------------------------------------------------------------------
+# Вопрос был не «что урезать», а «сколько можно тратить, не сдвигая дату».
+# Потолок = доход − флэт 2 700 − взнос в lijfrente + возврат налога с него.
+INCOME_NET, FLAT, LIJF_YEAR = 6337, 2700, 6000
+TAX_NO_LIJF, TAX_WITH_LIJF = 30957, 28374        # tools/tax_zzp.py, шкала 2026
+lijf_saving = TAX_NO_LIJF - TAX_WITH_LIJF
+check("экономия налога от lijfrente 6 000", lijf_saving, 2582, tol=1)
+ceiling = INCOME_NET - FLAT - LIJF_YEAR / 12 + lijf_saving / 12
+check("потолок трат в месяц", ceiling, 3352, tol=1)
+check("свободный ход сверх факта", ceiling - EXPENSES_TOTAL, 372, tol=1)
+check("свободный ход за год", (ceiling - EXPENSES_TOTAL) * 12, 4466, tol=6)
+note("расходы НИЖЕ потолка на 372/мес — сокращать нечего")
+# Излишек: 657/мес премиями; с вычетом резерв под налог нужен меньше.
+SURPLUS_YEAR = 7884                                # 657 × 12
+check("излишек с учётом вычета", SURPLUS_YEAR + lijf_saving, 10466, tol=1)
+check("остаётся на IBKR сверх флэта", SURPLUS_YEAR + lijf_saving - LIJF_YEAR,
+      4466, tol=1)
+check("чистая стоимость lijfrente в месяц", (LIJF_YEAR - lijf_saving) / 12,
+      285, tol=1)
+# Разрыв по срокам: взнос в декабре 2026, экономия приходит в июне 2027.
+EF_CURRENT, EF_TARGET = 19972, EXPENSES_TOTAL * 6
+have_by_dec = 657 * 5 + (EF_CURRENT - EF_TARGET)
+check("накопится к декабрю 2026", have_by_dec, 5377, tol=1)
+check("разрыв под полный взнос 6 000", LIJF_YEAR - have_by_dec, 623, tol=1)
+note("поэтому первый взнос 4 000, с 2027 — полные 6 000 (jaarruimte 19 350)")
+
+# ---------------------------------------------------------------------------
+# 12. ИПОТЕКА ЧЕРЕЗ 7 ЛЕТ: планируемое событие, не гипотеза
+# ---------------------------------------------------------------------------
+PORTFOLIO_NOW, REAL_RETURN, YEARS = 187480, 0.06, 7
+i, n = REAL_RETURN / 12, YEARS * 12
+grown = PORTFOLIO_NOW * (1 + i) ** n
+contrib_fv = FLAT * (((1 + i) ** n - 1) / i)
+check("портфель 2033 — рост нынешнего", grown, 285039, tol=60)
+check("портфель 2033 — будущие взносы", contrib_fv, 281000, tol=60)
+check("IBKR ликвидно к 2033", grown + contrib_fv, 566039, tol=100)
+lijf_pot = 0.0
+for _ in range(7):                                  # взносы дек 2026..дек 2032
+    lijf_pot = lijf_pot * (1 + REAL_RETURN) + LIJF_YEAR
+check("lijfrente к 2033 (заперто до 68)", lijf_pot, 50363, tol=5)
+
+
+def _pmt(principal: float, rate: float, years: int) -> float:
+    m, months = rate / 12, years * 12
+    return principal * m / (1 - (1 + m) ** -months)
+
+
+HOUSE, MORT_RATE, MORT_YEARS = 500_000, 0.04, 30
+for share, want_pmt, want_kk in ((0.25, 597, 6875), (0.35, 835, 9625),
+                                 (0.50, 1194, 13750)):
+    part = HOUSE * share
+    check(f"платёж при доле {share:.0%}", _pmt(part, MORT_RATE, MORT_YEARS),
+          want_pmt, tol=1)
+    check(f"kosten koper 5,5 % при доле {share:.0%}", part * 0.055,
+          want_kk, tol=1)
+check("каждые 10 % доли в расходах",
+      (_pmt(HOUSE * 0.35, MORT_RATE, MORT_YEARS)
+       - _pmt(HOUSE * 0.25, MORT_RATE, MORT_YEARS)), 238, tol=8)
+note("платёж номинально фиксирован: за 30 лет при инфляции 2,5 % его средняя "
+     "реальная величина 590 против номинала 835 — модель завышает расход")
+note("даты из tools/fire.py от 2033: доля 25 % — 2040/57, 35 % — 2042/59 "
+     "(с поправкой на инфляцию платежа 2040/57), 50 % — 2045/62")
+
+# ---------------------------------------------------------------------------
 print("=" * 72)
 print("ВЕРИФИКАЦИЯ ДАННЫХ О ДОХОДАХ И РАСХОДАХ")
 print("=" * 72)
