@@ -19,9 +19,40 @@ from __future__ import annotations
 
 import argparse
 
+# --- ЧТО УЧТЕНО И ЧТО НЕТ --------------------------------------------------
+#
+# ПРИМЕНЯЕТСЯ:
+#   zelfstandigenaftrek 1 200  — ТРЕБУЕТ urencriterium (1 225 часов в год
+#       на предприятие). При доходе 105 236 от одного клиента критерий
+#       заведомо выполняется по факту, но Belastingdienst требует
+#       urenregistratie — журнал часов. Если журнала нет и вычет снимут,
+#       налог вырастет на 587.
+#   MKB-winstvrijstelling 12,7 % — БЕЗ urencriterium, даётся всегда.
+#   algemene heffingskorting — убывает, при базе 80 841 равна нулю.
+#   arbeidskorting — убывает от 39 957, здесь 2 937 из максимальных 5 599.
+#   ZVW 5,26 % — база ограничена 77 000, поэтому взнос упёрся в потолок.
+#
+# НЕ ПРИМЕНЯЕТСЯ И ЭТО ВЕРНО:
+#   startersaftrek 2 123 — только 3 раза за первые 5 лет предпринимательства.
+#       Владелица больше не начинающая, поэтому вычета нет. Если бы он ещё
+#       был доступен, налог был бы меньше на 1 020 — проверить, не остался
+#       ли неиспользованный год, стоит один раз.
+#   meewerkaftrek — партнёр в предприятии не работает.
+#   IACK (комбинированная скидка) — детей до 12 лет нет.
+#   FOR / oudedagsreserve — отменена с 2023.
+#   middeling — отменена, последний период 2022-2024.
+#   KIA — только если за календарный год куплено оборудования больше 2 901;
+#       считается отдельно, см. docs/what-matters.md.
+#
+# НЕ СЧИТАЕТСЯ ЗДЕСЬ ВООБЩЕ, НО ПРИХОДИТ ТЕМ ЖЕ СЧЁТОМ:
+#   НАЛОГ BOX 3 на капитал. Это отдельная строка того же годового
+#   начисления, и клиент её НЕ компенсирует — он компенсирует налог
+#   с гонорара. Оценка за 2026: ~2 500. См. docs/tax-reserve.md.
+#
 # --- параметры 2026 (ориентировочные) --------------------------------------
 BRACKETS = [(38_883, 0.3570), (79_137, 0.3756), (float("inf"), 0.4950)]
-ZELFSTANDIGENAFTREK = 1_200      # план поэтапного снижения
+ZELFSTANDIGENAFTREK = 1_200      # план поэтапного снижения; нужен urencriterium
+STARTERSAFTREK = 0               # не начинающая: 3 года за первые 5 исчерпаны
 MKB_VRIJSTELLING = 0.127
 ZVW_RATE = 0.0526
 ZVW_MAX_BASE = 77_000
@@ -68,7 +99,7 @@ def arbeidskorting(arbeidsinkomen: float) -> float:
 
 def compute(revenue: float, expenses: float, lijfrente: float = 0.0) -> dict:
     profit = revenue - expenses
-    after_zelf = max(0.0, profit - ZELFSTANDIGENAFTREK)
+    after_zelf = max(0.0, profit - ZELFSTANDIGENAFTREK - STARTERSAFTREK)
     after_mkb = after_zelf * (1 - MKB_VRIJSTELLING)
     base = max(0.0, after_mkb - lijfrente)
 
