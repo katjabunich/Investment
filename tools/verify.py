@@ -233,11 +233,22 @@ note("в июне доплатили 751 при тратах за границе
 # 11. ПОТОЛОК ТРАТ И LIJFRENTE ИЗ ПРЕМИЙ
 # ---------------------------------------------------------------------------
 # Вопрос был не «что урезать», а «сколько можно тратить, не сдвигая дату».
-# Потолок = доход − флэт 2 700 − взнос в lijfrente + возврат налога с него.
+# Потолок = доход − постоянный взнос 2 700 − взнос в lijfrente + возврат налога с него.
 INCOME_GROSS, FLAT, LIJF_YEAR = 6337, 2700, 6000
 TAX_NO_LIJF, TAX_WITH_LIJF = 30957, 28374        # tools/tax_zzp.py, шкала 2026
 lijf_saving = TAX_NO_LIJF - TAX_WITH_LIJF
 check("экономия налога от lijfrente 6 000", lijf_saving, 2582, tol=1)
+# Премии — БРУТТО. Проверяем, что нетто от них сходится с излишком.
+BONUSES_GROSS = 13_603
+tax_on_bonuses = TAX_NO_LIJF - compute(REVENUE - BONUSES_GROSS, 11_435)["total"]
+check("налог именно с премий", tax_on_bonuses, 5935, tol=2)
+check("средняя ставка на премии", tax_on_bonuses / BONUSES_GROSS * 100, 43.6,
+      tol=0.2, unit="%")
+check("нетто от премий", BONUSES_GROSS - tax_on_bonuses, 7668, tol=2)
+note("правило распределения премии: 56 % в IBKR, 44 % в резерв на налог "
+     "(раньше стояло 58/42 — считалось по предельной ставке, а не по средней)")
+check("нетто от премий + базовый излишек 216", BONUSES_GROSS - tax_on_bonuses + 216,
+      7884, tol=2)
 # 6 337 посчитан за вычетом Box 1 и ZVW, но НЕ Box 3. Box 3 платится тем же
 # счётом; если держать его в наличных (а не продавать бумаги), он уменьшает
 # денежный доход. Точная величина считается ниже, в блоке 11b.
@@ -258,7 +269,7 @@ note("расходы НИЖЕ потолка на 166/мес даже после
 SURPLUS_YEAR = 7884 - BOX3_YEAR
 check("излишек за год после Box 3", SURPLUS_YEAR, 5413, tol=1)
 check("излишек с учётом вычета", SURPLUS_YEAR + lijf_saving, 7995, tol=1)
-check("остаётся на IBKR сверх флэта", SURPLUS_YEAR + lijf_saving - LIJF_YEAR,
+check("остаётся на IBKR сверх постоянного взноса", SURPLUS_YEAR + lijf_saving - LIJF_YEAR,
       1995, tol=1)
 check("чистая стоимость lijfrente в месяц", (LIJF_YEAR - lijf_saving) / 12,
       285, tol=1)
