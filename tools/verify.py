@@ -341,8 +341,36 @@ for lij, want in ((6000, 2583), (10000, 4274), (14400, 4274)):
     cash_b2 = _fixed_point(BIZ_EXPENSES, lij)[2]
     check(f"цена неопределённости базы при lijfrente {lij}",
           cash_b1 - cash_b2, want, tol=3)
-note("база 1 «налог с работы, до личных вычетов» против базы 2 «итоговое "
-     "начисление» — разница 2 583-4 274/год, зафиксировать письмом до июня 2027")
+# Три позиции при lijfrente 9 500 — что сообщать клиенту в июне.
+BOX3_Y, LIJ = 2471, 9500
+lij_back = (compute(105_236, BIZ_EXPENSES, 0)["total"]
+            - compute(105_236, BIZ_EXPENSES, LIJ)["total"])
+check("возврат пенсии обратно в базу", lij_back, 4119, tol=2)
+
+
+def _position(add_back: float, add_box3: float) -> float:
+    """Касса за год при заданном способе считать сообщаемую цифру."""
+    revenue = 105_236.0
+    for _ in range(50):
+        box1 = compute(revenue, BIZ_EXPENSES, LIJ)["total"]
+        reported = box1 + add_back + add_box3
+        revenue = REG_BONUSES + max(0.0, reported - Z_EMBEDDED)
+    return revenue - box1 - BIZ_EXPENSES - BOX3_Y
+
+
+p1 = _position(0, BOX3_Y)              # отдать декларацию целиком
+p2 = _position(lij_back, BOX3_Y)       # вернуть пенсию, Box 3 оставить
+p3 = _position(lij_back, 0)            # налог с дохода по проекту
+check("позиция 1 — отдать декларацию целиком", p1, 62844, tol=3)
+check("позиция 2 — вернуть пенсию, Box 3 внутри", p2, 66963, tol=3)
+check("позиция 3 — налог с дохода по проекту", p3, 64492, tol=3)
+check("позиция 3 против позиции 1", p3 - p1, 1648, tol=3)
+check("честность стоит (позиция 3 против 2)", p3 - p2, -2471, tol=3)
+note("позиция 3 — единственная связная: деловые расходы внутри (это "
+     "себестоимость работы), пенсия обратно, Box 3 исключён. То, что она "
+     "дешевле позиции 2 на 2 471, и есть признак того, что она честная")
+note("деловые расходы и KIA дают в кассе НОЛЬ, пока идёт компенсация; "
+     "620-768/год они начнут стоить, когда компенсация закончится")
 # Порог, за которым вычет снова работает на неё.
 threshold = next(L for L in range(0, 20000, 100)
                  if _fixed_point(BIZ_EXPENSES, L)[1] <= 0)
