@@ -135,10 +135,11 @@ details[open] summary::before{content:"– "}
       <div class="f"><label for="pay">Всего в месяц</label><input class="num" id="pay" type="number" value="7000" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="sal">Из них зарплата</label><input class="num" id="sal" type="number" value="4300" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="book">Из них бухгалтерия</label><input class="num" id="book" type="number" value="135" step="5"><span class="unit">€</span></div>
+      <div class="f"><label for="mom">Из них маме</label><input class="num" id="mom" type="number" value="100" step="10"><span class="unit">€</span></div>
       <div class="f"><label for="months">Месяцев по этой ставке</label><input class="num" id="months" type="number" value="12" step="1"><span class="unit">мес</span></div>
       <div class="derived"><span>Вы удерживаете</span><b class="num" id="dRate">36,6 %</b><span style="flex:0;color:var(--faint);font-size:11px">со всех<br>поступлений</span></div>
       <div class="derived" style="border-top:0;padding-top:2px"><span>Заложено за год</span><b class="num" id="dTaxYear">38 561</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
-      <p class="hint" style="margin:10px 0 0">Процент выводится из разбивки выплаты и применяется ко всем поступлениям, включая премии и доплату.</p>
+      <p class="hint" style="margin:10px 0 0">Процент выводится из разбивки выплаты и применяется ко всем поступлениям, включая премии и доплату. От ваших расходов он не зависит.</p>
     </div>
 
     <div class="card">
@@ -150,10 +151,11 @@ details[open] summary::before{content:"– "}
 
     <div class="card">
       <h2>Деловые расходы за год</h2>
-      <p class="hint">Уменьшают прибыль, а значит и налог</p>
+      <p class="hint">Уменьшают ваш налог, но <b>не уменьшают то, что вы запрашиваете у клиента</b> — процент считается от поступлений</p>
       <div class="f"><label for="psy">Психолог</label><input class="num" id="psy" type="number" value="5400" step="100"><span class="unit">€</span></div>
       <div class="f"><label for="dutch">Голландский</label><input class="num" id="dutch" type="number" value="1200" step="50"><span class="unit">€</span></div>
-      <div class="f"><label for="subs">Подписки и софт</label><input class="num" id="subs" type="number" value="1882" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="subs">Подписки и софт</label><input class="num" id="subs" type="number" value="1458" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="decl">Бухгалтерия и декларация</label><input class="num" id="decl" type="number" value="424" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="other">Прочее и техника</label><input class="num" id="other" type="number" value="0" step="100"><span class="unit">€</span></div>
       <div class="derived"><span>Всего расходов</span><b class="num" id="dExp">8 482</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
     </div>
@@ -294,9 +296,9 @@ details[open] summary::before{content:"– "}
   }
 
   function render(){
-    const pay=val('pay'), sal=val('sal'), book=val('book'), months=val('months');
-    const taxMonth=pay-sal-book;
-    const expenses=val('psy')+val('dutch')+val('subs')+val('other');
+    const pay=val('pay'), sal=val('sal'), book=val('book'), mom=val('mom'), months=val('months');
+    const taxMonth=pay-sal-book-mom;
+    const expenses=val('psy')+val('dutch')+val('subs')+val('decl')+val('other');
     set('dExp', f(expenses));
 
     const reg=pay*months, prem=val('prem'), comp=val('comp');
@@ -344,7 +346,7 @@ details[open] summary::before{content:"– "}
     set('outComp', gap>0 ? f(payout) : '0');
     set('outNote', gap>0
       ? ('Разрыв '+f(gap)+', увеличенный на налог с самой доплаты.')
-      : ('Заложено больше налога на '+f(-gap)+' — доплачивать нечего.'));
+      : ('Заложено больше налога на '+f(-gap)+' — доплачивать нечего. Эти деньги остаются у вас: расходы уменьшают налог, но не то, что вы запрашиваете.'));
 
     const pill=g('outPill'), fill=g('gFill');
     const share=Math.min(1, payout/CEILING);
