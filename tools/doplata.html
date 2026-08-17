@@ -222,6 +222,16 @@ details[open] summary::before{content:"– "}
       </div>
 
       <div class="ledger">
+        <p class="foot" style="margin:0 0 8px">Проверка: вся выгода от расходов доходит до вас. Доплата выглядит маленькой потому, что часть выгоды вы уже держите в резерве — вы удержали больше, чем ваш фактический налог.</p>
+        <div class="lrow"><div class="n">Удержано в резерв</div><div class="v num" id="cZ">36 319</div></div>
+        <div class="lrow neg"><div class="n">Ваш фактический налог</div><div class="v num" id="cTax">−33 325</div></div>
+        <div class="lrow"><div class="n">Остаток резерва <em>уже у вас</em></div><div class="v num" id="cRest">2 994</div></div>
+        <div class="lrow"><div class="n">Доплата минус налог с неё <em>придёт в июле</em></div><div class="v num" id="cPayNet">1 282</div></div>
+        <div class="lrow key"><div class="n">Итого у вас</div><div class="v num" id="cTotal">4 276</div></div>
+        <div class="lrow sum"><div class="n">Ваша формула: расходы × предельная ставка</div><div class="v num" id="cFormula">4 276</div></div>
+      </div>
+
+      <div class="ledger">
         <p class="foot" style="margin:0 0 8px">А это остаётся у вас и на доплату не влияет:</p>
         <div class="lrow"><div class="n">Выгода от деловых расходов</div><div class="v num" id="lBenefit">4 276</div></div>
         <div class="lrow" id="rowLijfBen"><div class="n">Выгода от lijfrente <em>налог на гонорар она не трогает</em></div><div class="v num" id="lLijfBen">0</div></div>
@@ -416,6 +426,14 @@ details[open] summary::before{content:"– "}
     set('sMarg', (marg*100).toFixed(1).replace('.',',')+' %');
 
     const payout = gap>0 ? gap/(1-marg) : 0;
+    const payoutNet = payout*(1-marg);
+    set('cZ', f(Z));
+    set('cTax', '−'+f(r.total));
+    set('cRest', f(Z-r.total));
+    set('cPayNet', f(payoutNet));
+    set('cTotal', f((Z-r.total)+payoutNet));
+    set('cFormula', f(expenses*marg));
+
     set('lGross', payout>0 ? f(payout) : '0');
     set('lCorrPay', payout>0 ? f(payout-gap) : '0');
     set('lGrossNote', 'предельная ставка '+(marg*100).toFixed(1).replace('.',',')+' %');
