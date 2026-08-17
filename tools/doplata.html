@@ -255,6 +255,13 @@ details[open] summary::before{content:"– "}
       </details>
 
       <details open>
+        <summary>Сколько запросить, чтобы на руки осталось нужное</summary>
+        <div class="f" style="border:0;padding:2px 0 8px"><label for="wantNet">Хочу на руки</label><input class="num" id="wantNet" type="number" value="5000" step="100"><span class="unit">€</span></div>
+        <div class="ledger" style="padding-left:0;padding-right:0" id="wantTable"></div>
+        <p class="foot" style="margin:4px 0 12px">Годится для премии, возмещения — для любого разового запроса. Множитель — обратный к вашему проценту удержания. Он покрывает резерв, но не весь налог: настоящая предельная ставка выше вашего процента, и остаток, как обычно, уедет в июльскую доплату.</p>
+      </details>
+
+      <details>
         <summary>Возмещение психолога — налог прибавить</summary>
         <div class="ledger" style="padding-left:0;padding-right:0" id="psyTable"></div>
         <p class="foot" style="margin:4px 0 12px">Возмещение — такое же поступление, как гонорар: налог с него по вашей схеме платит клиент. Значит выставлять надо сумму, из которой после вашего процента останется нужное. Это обычное правило, никакого особого режима — остаток трует в июле.</p>
@@ -412,6 +419,19 @@ details[open] summary::before{content:"– "}
     set('lFairNote', 'сейчас удерживается '+(avgRate*100).toFixed(1).replace('.',',')+' %');
 
     // возмещение психолога: чтобы в кармане осталось нужное, выставить с грос-апом
+    const wt=g('wantTable');
+    if(wt){
+      const want=val('wantNet');
+      const k = rate<1 ? 1/(1-rate) : 1;
+      const ask=want*k;
+      wt.innerHTML=
+        '<div class="lrow"><div class="n">Ваш процент удержания</div><div class="v num">'+(rate*100).toFixed(1).replace('.',',')+' %</div></div>'
+       +'<div class="lrow"><div class="n">Множитель <em>1 ÷ (1 − '+(rate*100).toFixed(1).replace('.',',')+' %)</em></div><div class="v num">×'+k.toFixed(3).replace('.',',')+'</div></div>'
+       +'<div class="lrow key"><div class="n">Запросить</div><div class="v num">'+f(ask)+'</div></div>'
+       +'<div class="lrow"><div class="n">из них в резерв</div><div class="v num">'+f(ask-want)+'</div></div>'
+       +'<div class="lrow sum"><div class="n">на руки</div><div class="v num">'+f(want)+'</div></div>';
+    }
+
     const pt=g('psyTable');
     if(pt){
       pt.innerHTML=
