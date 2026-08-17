@@ -396,6 +396,37 @@ note("наверху калькулятора стоит доплата С гр�
 check("фактический налог при её расходах",
       compute(REVENUE_ALL, EXP_ACTUAL)["total"], 33325, tol=3)
 
+# --- откуда берётся «не хватает»: построчно ---------------------------------
+note("НЕ ХВАТАЕТ 1 282 — ЭТО РАЗНИЦА ДВУХ ПРОЦЕНТОВ ОТ ОДНОЙ И ТОЙ ЖЕ СУММЫ")
+_lines = [("регулярные 7 000 x 10,5", 7000 * NEW_M, 2465 * NEW_M),
+          ("до повышения 5 400 x 1,5", JAN_PAY * OLD_M, JAN_HOLD * OLD_M),
+          ("премии", BONUSES_GROSS, HOLD_RATE * BONUSES_GROSS),
+          ("доплата, пришедшая в июле", TAX_COMP, HOLD_RATE * TAX_COMP),
+          ("возмещение психолога", PSY_GROSS, HOLD_RATE * PSY_GROSS)]
+check("сумма строк = выручка", sum(a for _, a, _ in _lines), REVENUE_ALL, tol=2)
+check("сумма удержаний = заложено", sum(z for _, _, z in _lines), Z_ALL, tol=2)
+check("налог на гонорар в процентах", BARE_ALL / REVENUE_ALL * 100, 35.8,
+      tol=0.1, unit="%")
+check("удержано в процентах", Z_ALL / REVENUE_ALL * 100, 34.6, tol=0.1, unit="%")
+check("разница процентов даёт недобор",
+      (BARE_ALL / REVENUE_ALL - Z_ALL / REVENUE_ALL) * REVENUE_ALL, GAP_ALL, tol=1)
+check("налог с самой доплаты", GAP_ALL / (1 - _margA) - GAP_ALL, 1303, tol=6)
+
+# --- lijfrente: выгода остаётся у неё --------------------------------------
+note("LIJFRENTE — ЛИЧНЫЙ ВЫЧЕТ, НА СЧЁТ КЛИЕНТУ НЕ ВЛИЯЕТ")
+note("клиент компенсирует налог на голый гонорар: без деловых расходов "
+     "и без взноса. Значит вся экономия от взноса остаётся у неё")
+_no_lijf = compute(REVENUE_ALL, EXP_ACTUAL)["total"]
+for _amt, _save in ((3000, 1485), (6000, 3048), (10000, 5284), (19350, 10359)):
+    _with = compute(REVENUE_ALL, EXP_ACTUAL, float(_amt))["total"]
+    check(f"экономия от взноса {_amt}", _no_lijf - _with, _save, tol=3)
+    check(f"налог на гонорар при взносе {_amt} не меняется",
+          compute(REVENUE_ALL, 0.0)["total"], BARE_ALL, tol=0)
+    check(f"доплата при взносе {_amt} не меняется",
+          compute(REVENUE_ALL, 0.0)["total"] - Z_ALL, GAP_ALL, tol=0)
+note("если бы взнос уменьшал базу клиента, налог на гонорар при 6 000 упал бы "
+     "до 34 631 и доплата стала бы меньше — этого в расчёте НЕТ")
+
 
 
 # ---------------------------------------------------------------------------

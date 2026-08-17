@@ -209,17 +209,23 @@ details[open] summary::before{content:"– "}
         <div class="lrow neg"><div class="n">Arbeidskorting</div><div class="v num" id="lAk">−3 222</div></div>
         <div class="lrow"><div class="n">Взнос Zvw 4,85 % <em id="lZvwNote">база ограничена 79 409</em></div><div class="v num" id="lZvw">3 851</div></div>
 
-        <div class="lrow key"><div class="n">Налог за год <em id="lEff">30,3 % от выручки</em></div><div class="v num" id="lTax">31 853</div></div>
-        <div class="lrow"><div class="n">Заложено <em id="lZnote">35,2 % от всех поступлений</em></div><div class="v num" id="lZ">37 058</div></div>
+        <div class="lrow key"><div class="n">Ваш налог за год <em id="lEff">это то, что вы реально заплатите</em></div><div class="v num" id="lTax">33 325</div></div>
       </div>
 
       <div class="ledger">
-        <p class="foot" style="margin:0 0 8px">Из этого «лишнего» часть — не запас, а ваша налоговая выгода от собственных расходов. Клиент компенсирует налог на гонорар; то, что вы сэкономили на психологе и подписках, остаётся вам.</p>
-        <div class="lrow"><div class="n">Налог, если бы расходов не было <em id="lBareNote">34,2 % от поступлений — это и есть ваш налог на гонорар</em></div><div class="v num" id="lBare">36 001</div></div>
-        <div class="lrow"><div class="n">Выгода от ваших расходов <em>ваша по праву</em></div><div class="v num" id="lBenefit">4 147</div></div>
-        <div class="lrow key"><div class="n" id="lBufName">Не хватает</div><div class="v num" id="lBuf">1 282</div></div>
-        <div class="lrow"><div class="n">То же с налогом на саму доплату <em id="lGrossNote">предельная ставка 50,4 %</em></div><div class="v num" id="lGross">2 585</div></div>
-        <div class="lrow sum"><div class="n">Точный процент к запросу <em id="lFairNote">вместо нынешних 35,2 %</em></div><div class="v num" id="lFair">34,2 %</div></div>
+        <p class="foot" style="margin:0 0 8px">Клиент компенсирует налог на <b>гонорар</b> — то есть посчитанный так, будто у вас нет ни деловых расходов, ни взноса в lijfrente. И то и другое ваш личный выбор, экономия от них ваша.</p>
+        <div class="lrow"><div class="n">Налог на гонорар <em id="lBareNote">его и компенсирует клиент</em></div><div class="v num" id="lBare">37 601</div></div>
+        <div class="lrow neg"><div class="n">Заложено вами за год <em id="lZnote2">удержано с поступлений</em></div><div class="v num" id="lZ2">−36 319</div></div>
+        <div class="lrow key"><div class="n" id="lBufName">Не хватает до налога на гонорар</div><div class="v num" id="lBuf">1 282</div></div>
+        <div class="lrow"><div class="n">Налог с самой доплаты <em id="lGrossNote">предельная ставка 50,4 %</em></div><div class="v num" id="lCorrPay">1 303</div></div>
+        <div class="lrow sum"><div class="n">Доплата в июле <em>это и есть цифра наверху</em></div><div class="v num" id="lGross">2 585</div></div>
+      </div>
+
+      <div class="ledger">
+        <p class="foot" style="margin:0 0 8px">А это остаётся у вас и на доплату не влияет:</p>
+        <div class="lrow"><div class="n">Выгода от деловых расходов</div><div class="v num" id="lBenefit">4 276</div></div>
+        <div class="lrow" id="rowLijfBen"><div class="n">Выгода от lijfrente <em>налог на гонорар она не трогает</em></div><div class="v num" id="lLijfBen">0</div></div>
+        <div class="lrow sum"><div class="n">Процент, который стоило бы закладывать <em id="lFairNote">сейчас удерживается 34,6 %</em></div><div class="v num" id="lFair">35,8 %</div></div>
       </div>
 
       <details>
@@ -340,13 +346,13 @@ details[open] summary::before{content:"– "}
     const avgRate = revenue>0 ? Z/revenue : 0;
     set('dRate', (rate*100).toFixed(1).replace('.',',')+' %');
     set('dTaxYear', f(Z));
-    set('lZnote', oldMonths>0
-      ? ((rate*100).toFixed(1).replace('.',',')+' % после повышения, '
+    set('lZnote2', oldMonths>0
+      ? ('удержано '+(rate*100).toFixed(1).replace('.',',')+' % после повышения и '
          +(oldRate*100).toFixed(1).replace('.',',')+' % первые '
          +String(oldMonths).replace('.',',')
          +' мес — в среднем '+(avgRate*100).toFixed(1).replace('.',',')+' %')
-      : ((rate*100).toFixed(1).replace('.',',')+' % от всех поступлений'));
-    set('lEff', (r.total/revenue*100).toFixed(1).replace('.',',')+' % от выручки');
+      : ('удержано '+(rate*100).toFixed(1).replace('.',',')+' % со всех поступлений'));
+    set('lEff', 'это то, что вы реально заплатите — '+(r.total/revenue*100).toFixed(1).replace('.',',')+' % от выручки');
 
     set('lRegNote', oldMonths>0
       ? (f(pay)+' × '+String(months).replace('.',',')+' + '+f(oldPay)+' × '+String(oldMonths).replace('.',','))
@@ -371,7 +377,6 @@ details[open] summary::before{content:"– "}
     set('lZvw', f(r.zvw));
     set('lZvwNote', r.afterMkb>ZVW_CAP ? 'база упёрлась в потолок 79 409' : 'база '+f(r.afterMkb)+', потолок не достигнут');
     set('lTax', f(r.total));
-    set('lZ', f(Z));
 
     const above=Math.max(0, r.base-78426);
     set('lLadder', above>0 ? ('над порогом 78 426 — '+f(above)) : ('до порога 78 426 — '+f(78426-r.base)));
@@ -385,12 +390,16 @@ details[open] summary::before{content:"– "}
     const benefit=bare.total-r.total;
     const buffer=Z-bare.total;
     set('lBare', f(bare.total));
-    set('lBareNote', (fair*100).toFixed(1).replace('.',',')+' % от поступлений — это и есть ваш налог на гонорар');
-    set('lBenefit', f(benefit));
+    set('lBareNote', 'его и компенсирует клиент — '+(fair*100).toFixed(1).replace('.',',')+' % от поступлений');
+    set('lZ2', '−'+f(Z));
+    set('lBenefit', f(tax(revenue, 0, 0).total - tax(revenue, expenses, 0).total));
+    const lijfBen = tax(revenue, expenses, 0).total - r.total;
+    if(g('rowLijfBen')) g('rowLijfBen').hidden = lijf<=0;
+    set('lLijfBen', f(lijfBen));
     set('lBufName', buffer>=0 ? 'Отложено лишнего' : 'Не хватает');
     set('lBuf', f(Math.abs(buffer)));
     set('lFair', (fair*100).toFixed(1).replace('.',',')+' %');
-    set('lFairNote', 'фактически удержано в среднем '+(avgRate*100).toFixed(1).replace('.',',')+' %');
+    set('lFairNote', 'сейчас удерживается '+(avgRate*100).toFixed(1).replace('.',',')+' %');
 
     // возмещение психолога: чтобы в кармане осталось нужное, выставить с грос-апом
     const pt=g('psyTable');
@@ -408,9 +417,8 @@ details[open] summary::before{content:"– "}
 
     const payout = gap>0 ? gap/(1-marg) : 0;
     set('lGross', payout>0 ? f(payout) : '0');
-    set('lGrossNote', payout>0
-      ? ('предельная ставка '+(marg*100).toFixed(1).replace('.',',')+' % — это и есть цифра наверху')
-      : 'доплачивать нечего');
+    set('lCorrPay', payout>0 ? f(payout-gap) : '0');
+    set('lGrossNote', 'предельная ставка '+(marg*100).toFixed(1).replace('.',',')+' %');
     set('outComp', gap>0 ? f(payout) : '0');
     set('outNote', gap>0
       ? ('Недобор '+f(gap)+' до налога на гонорар, увеличенный на налог с самой доплаты. Выгода от ваших расходов ('+f(benefit)+') в зачёт не идёт — она ваша.')
