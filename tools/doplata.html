@@ -136,7 +136,10 @@ details[open] summary::before{content:"– "}
       <div class="f"><label for="sal">Из них зарплата</label><input class="num" id="sal" type="number" value="4300" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="book">Из них бухгалтерия</label><input class="num" id="book" type="number" value="135" step="5"><span class="unit">€</span></div>
       <div class="f"><label for="mom">Из них маме</label><input class="num" id="mom" type="number" value="100" step="10"><span class="unit">€</span></div>
-      <div class="f"><label for="months">Месяцев по этой ставке</label><input class="num" id="months" type="number" value="12" step="1"><span class="unit">мес</span></div>
+      <div class="f"><label for="months">Месяцев по этой ставке</label><input class="num" id="months" type="number" value="10.5" step="0.5"><span class="unit">мес</span></div>
+      <div class="f"><label for="oldPay">До повышения — выплата</label><input class="num" id="oldPay" type="number" value="5400" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="oldSal">До повышения — зарплата</label><input class="num" id="oldSal" type="number" value="3700" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="oldMonths">Месяцев по старой ставке</label><input class="num" id="oldMonths" type="number" value="1.5" step="0.5"><span class="unit">мес</span></div>
       <div class="derived"><span>Вы удерживаете</span><b class="num" id="dRate">36,6 %</b><span style="flex:0;color:var(--faint);font-size:11px">со всех<br>поступлений</span></div>
       <div class="derived" style="border-top:0;padding-top:2px"><span>Заложено за год</span><b class="num" id="dTaxYear">38 561</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
       <p class="hint" style="margin:10px 0 0">Процент выводится из разбивки выплаты и применяется ко всем поступлениям, включая премии и доплату. От ваших расходов он не зависит.</p>
@@ -200,6 +203,7 @@ details[open] summary::before{content:"– "}
         <div class="lrow sum"><div class="n">Налогооблагаемая база</div><div class="v num" id="lBase">83 421</div></div>
 
         <div class="lrow"><div class="n">Налог по шкале <em id="lLadder"></em></div><div class="v num" id="lIt">31 224</div></div>
+        <div class="lrow"><div class="n">Tariefsaanpassing 11,94 % <em id="lCorrNote">вычеты экономят максимум по 37,56 %, а не по 49,5 %</em></div><div class="v num" id="lCorr">1 556</div></div>
         <div class="lrow neg"><div class="n">Algemene heffingskorting</div><div class="v num" id="lAhk">0</div></div>
         <div class="lrow neg"><div class="n">Arbeidskorting</div><div class="v num" id="lAk">−3 222</div></div>
         <div class="lrow"><div class="n">Взнос Zvw 4,85 % <em id="lZvwNote">база ограничена 79 409</em></div><div class="v num" id="lZvw">3 851</div></div>
@@ -258,6 +262,8 @@ details[open] summary::before{content:"– "}
 (function(){
   const BRACKETS=[[38883,0.3575],[78426,0.3756],[Infinity,0.4950]];
   const ZELF=1200, MKB=0.127;
+  // tariefsaanpassing: вычеты дают экономию максимум по 37,56 %, разница 11,94 %
+  const TA=0.1194, TA_THRESHOLD=78426;
   const ZVW_RATE=0.0485, ZVW_CAP=79409;
   const AHK_MAX=3115, AHK_START=29736, AHK_RATE=0.06398, AHK_ZERO=78426;
   const AK_MAX=5685, AK_TOP=45592, AK_RATE=0.06510, AK_ZERO=132920;
@@ -289,11 +295,13 @@ details[open] summary::before{content:"– "}
     const afterZelf=Math.max(0, profit-ZELF);
     const afterMkb=afterZelf*(1-MKB);
     const base=Math.max(0, afterMkb-lijf);
-    const it=scaleTax(base);
+    const posten=Math.max(0, profit-afterMkb);
+    const corr=TA*Math.min(posten, Math.max(0, base+posten-TA_THRESHOLD));
+    const it=scaleTax(base)+corr;
     const a1=ahk(base), a2=ak(afterMkb);
     const itNet=Math.max(0, it-a1-a2);
     const zvw=Math.min(afterMkb, ZVW_CAP)*ZVW_RATE;
-    return {profit, afterZelf, afterMkb, base, it, ahk:a1, ak:a2, itNet, zvw, total:itNet+zvw};
+    return {profit, afterZelf, afterMkb, base, posten, corr, it, ahk:a1, ak:a2, itNet, zvw, total:itNet+zvw};
   }
   function box3(inv,sav){
     const total=inv+sav;
@@ -309,18 +317,32 @@ details[open] summary::before{content:"– "}
     const expenses=val('psy')+val('dutch')+val('subs')+val('decl')+val('other');
     set('dExp', f(expenses));
 
-    const reg=pay*months, prem=val('prem'), comp=val('comp');
+    // месяцы до повышения шли по старой выплате и старому проценту
+    const oldPay=val('oldPay'), oldSal=val('oldSal'), oldMonths=val('oldMonths');
+    const oldTaxMonth=Math.max(0, oldPay-oldSal-book-mom);
+    const oldRate = oldPay>0 ? oldTaxMonth/oldPay : 0;
+
+    const reg=pay*months+oldPay*oldMonths, prem=val('prem'), comp=val('comp');
     const revenue=reg+prem+comp;
     const rate = pay>0 ? taxMonth/pay : 0;
     const lijf=val('lijf');
     const r=tax(revenue, expenses, lijf);
-    const Z=rate*revenue;
+    // премии и компенсация идут по нынешнему проценту, старые месяцы — по старому
+    const Z=taxMonth*months + oldTaxMonth*oldMonths + rate*(prem+comp);
+    const avgRate = revenue>0 ? Z/revenue : 0;
     set('dRate', (rate*100).toFixed(1).replace('.',',')+' %');
     set('dTaxYear', f(Z));
-    set('lZnote', (rate*100).toFixed(1).replace('.',',')+' % от всех поступлений');
+    set('lZnote', oldMonths>0
+      ? ((rate*100).toFixed(1).replace('.',',')+' % после повышения, '
+         +(oldRate*100).toFixed(1).replace('.',',')+' % первые '
+         +String(oldMonths).replace('.',',')
+         +' мес — в среднем '+(avgRate*100).toFixed(1).replace('.',',')+' %')
+      : ((rate*100).toFixed(1).replace('.',',')+' % от всех поступлений'));
     set('lEff', (r.total/revenue*100).toFixed(1).replace('.',',')+' % от выручки');
 
-    set('lRegNote', f(pay)+' × '+months);
+    set('lRegNote', oldMonths>0
+      ? (f(pay)+' × '+String(months).replace('.',',')+' + '+f(oldPay)+' × '+String(oldMonths).replace('.',','))
+      : (f(pay)+' × '+String(months).replace('.',',')));
     set('lReg', f(reg));
     set('lPrem', f(prem));
     set('lComp', f(comp));
@@ -331,7 +353,11 @@ details[open] summary::before{content:"– "}
     g('rowLijf').hidden = lijf<=0;
     set('lLijf', '−'+f(lijf));
     set('lBase', f(r.base));
-    set('lIt', f(r.it));
+    set('lIt', f(r.it-r.corr));
+    set('lCorr', r.corr>0 ? '+'+f(r.corr) : '0');
+    set('lCorrNote', r.corr>0
+      ? ('вычеты '+f(r.posten)+' экономят по 37,56 %, а не по 49,5 %')
+      : 'не применяется — база ниже 78 426');
     set('lAhk', r.ahk>0 ? '−'+f(r.ahk) : '0');
     set('lAk', '−'+f(r.ak));
     set('lZvw', f(r.zvw));
@@ -358,7 +384,7 @@ details[open] summary::before{content:"– "}
     set('lBufName', buffer>=0 ? 'Реальный запас' : 'Реально не хватает');
     set('lBuf', f(Math.abs(buffer)));
     set('lFair', (fair*100).toFixed(1).replace('.',',')+' %');
-    set('lFairNote', 'вместо нынешних '+(rate*100).toFixed(1).replace('.',',')+' %');
+    set('lFairNote', 'фактически удержано в среднем '+(avgRate*100).toFixed(1).replace('.',',')+' %');
 
     // предельная ставка — из самой модели, а не константой
     const marg=(tax(revenue+1000, expenses, lijf).total - r.total)/1000;

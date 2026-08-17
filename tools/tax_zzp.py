@@ -73,6 +73,13 @@ AK_TOP = 45_592                  # где достигает максимума
 AK_RATE = 0.06510                # скорость убывания выше
 AK_ZERO = 132_920
 
+# Tariefsaanpassing (art. 2.10 lid 2 Wet IB 2001): вычеты, снижающие базу,
+# дают экономию максимум по ставке второй ступени 37,56 %. Разница 11,94 %
+# возвращается налогом. Под ограничение попадают ondernemersaftrek и
+# MKB-winstvrijstelling; взнос в lijfrente — нет, это иная категория.
+TARIEFSAANPASSING = 0.1194
+TARIEF_THRESHOLD = 78_426        # начало верхней ступени
+
 BOX3_EFFECTIVE = 0.0216          # 6% вменённых x 36%
 
 
@@ -108,7 +115,12 @@ def compute(revenue: float, expenses: float, lijfrente: float = 0.0) -> dict:
     after_mkb = after_zelf * (1 - MKB_VRIJSTELLING)
     base = max(0.0, after_mkb - lijfrente)
 
-    it = income_tax(base)
+    # вычеты, чью ставку ограничивает tariefsaanpassing
+    posten = (profit - after_mkb) if profit > after_mkb else 0.0
+    correctie = TARIEFSAANPASSING * min(
+        posten, max(0.0, base + posten - TARIEF_THRESHOLD))
+
+    it = income_tax(base) + correctie
     ahk = algemene_heffingskorting(base)
     ak = arbeidskorting(after_mkb)
     it_net = max(0.0, it - ahk - ak)
@@ -117,6 +129,7 @@ def compute(revenue: float, expenses: float, lijfrente: float = 0.0) -> dict:
     return {
         "revenue": revenue, "expenses": expenses, "profit": profit,
         "after_zelf": after_zelf, "after_mkb": after_mkb, "base": base,
+        "posten": posten, "correctie": correctie,
         "income_tax": it, "ahk": ahk, "ak": ak, "income_tax_net": it_net,
         "zvw": zvw, "total": it_net + zvw, "net": profit - it_net - zvw,
     }
