@@ -150,7 +150,7 @@ details[open] summary::before{content:"– "}
       <p class="hint">Всё, что приходит сверх регулярных выплат</p>
       <div class="f"><label for="prem">Премии за год</label><input class="num" id="prem" type="number" value="13603" step="100"><span class="unit">€</span></div>
       <div class="f"><label for="comp">Доплата, пришедшая в этом году</label><input class="num" id="comp" type="number" value="7633" step="100"><span class="unit">€</span></div>
-      <div class="f"><label for="psyc">Возмещение психолога</label><input class="num" id="psyc" type="number" value="1400" step="100"><span class="unit">€</span></div>
+      <div class="f"><label for="psyc">Возмещение психолога</label><input class="num" id="psyc" type="number" value="2161" step="50"><span class="unit">€</span></div>
     </div>
 
     <div class="card">
@@ -211,14 +211,14 @@ details[open] summary::before{content:"– "}
 
         <div class="lrow key"><div class="n">Налог за год <em id="lEff">30,3 % от выручки</em></div><div class="v num" id="lTax">31 853</div></div>
         <div class="lrow"><div class="n">Заложено <em id="lZnote">35,2 % от всех поступлений</em></div><div class="v num" id="lZ">37 058</div></div>
-        <div class="lrow sum"><div class="n" id="lGapName">Отложено лишнего</div><div class="v num" id="lGap">5 205</div></div>
       </div>
 
       <div class="ledger">
         <p class="foot" style="margin:0 0 8px">Из этого «лишнего» часть — не запас, а ваша налоговая выгода от собственных расходов. Клиент компенсирует налог на гонорар; то, что вы сэкономили на психологе и подписках, остаётся вам.</p>
         <div class="lrow"><div class="n">Налог, если бы расходов не было <em id="lBareNote">34,2 % от поступлений — это и есть ваш налог на гонорар</em></div><div class="v num" id="lBare">36 001</div></div>
         <div class="lrow"><div class="n">Выгода от ваших расходов <em>ваша по праву</em></div><div class="v num" id="lBenefit">4 147</div></div>
-        <div class="lrow key"><div class="n" id="lBufName">Реальный запас</div><div class="v num" id="lBuf">1 043</div></div>
+        <div class="lrow key"><div class="n" id="lBufName">Не хватает</div><div class="v num" id="lBuf">1 282</div></div>
+        <div class="lrow"><div class="n">То же с налогом на саму доплату <em id="lGrossNote">предельная ставка 50,4 %</em></div><div class="v num" id="lGross">2 585</div></div>
         <div class="lrow sum"><div class="n">Точный процент к запросу <em id="lFairNote">вместо нынешних 35,2 %</em></div><div class="v num" id="lFair">34,2 %</div></div>
       </div>
 
@@ -336,7 +336,7 @@ details[open] summary::before{content:"– "}
     const lijf=val('lijf');
     const r=tax(revenue, expenses, lijf);
     // премии и компенсация идут по нынешнему проценту, старые месяцы — по старому
-    const Z=taxMonth*months + oldTaxMonth*oldMonths + rate*(prem+comp);
+    const Z=taxMonth*months + oldTaxMonth*oldMonths + rate*(prem+comp+psyc);
     const avgRate = revenue>0 ? Z/revenue : 0;
     set('dRate', (rate*100).toFixed(1).replace('.',',')+' %');
     set('dTaxYear', f(Z));
@@ -381,15 +381,13 @@ details[open] summary::before{content:"– "}
     // Доплата считается от НЕГО: выгода от расходов остаётся у вас.
     const bare=tax(revenue, 0, 0);
     const gap=bare.total-Z;
-    set('lGapName', gap>0 ? 'Не хватает до налога на гонорар' : 'Отложено лишнего');
-    set('lGap', f(Math.abs(gap)));
     const fair=revenue>0 ? bare.total/revenue : 0;
     const benefit=bare.total-r.total;
     const buffer=Z-bare.total;
     set('lBare', f(bare.total));
     set('lBareNote', (fair*100).toFixed(1).replace('.',',')+' % от поступлений — это и есть ваш налог на гонорар');
     set('lBenefit', f(benefit));
-    set('lBufName', buffer>=0 ? 'Реальный запас' : 'Реально не хватает');
+    set('lBufName', buffer>=0 ? 'Отложено лишнего' : 'Не хватает');
     set('lBuf', f(Math.abs(buffer)));
     set('lFair', (fair*100).toFixed(1).replace('.',',')+' %');
     set('lFairNote', 'фактически удержано в среднем '+(avgRate*100).toFixed(1).replace('.',',')+' %');
@@ -397,11 +395,11 @@ details[open] summary::before{content:"– "}
     // возмещение психолога: чтобы в кармане осталось нужное, выставить с грос-апом
     const pt=g('psyTable');
     if(pt){
-      const gross = rate<1 ? psyc/(1-rate) : psyc;
       pt.innerHTML=
-        '<div class="lrow"><div class="n">Нужно получить на руки</div><div class="v num">'+f(psyc)+'</div></div>'
-       +'<div class="lrow"><div class="n">Ваш процент <em>'+(rate*100).toFixed(1).replace('.',',')+' %, как со всех поступлений</em></div><div class="v num">'+f(gross-psyc)+'</div></div>'
-       +'<div class="lrow key"><div class="n">Выставить клиенту</div><div class="v num">'+f(gross)+'</div></div>';
+        '<div class="lrow"><div class="n">Выставлено клиенту</div><div class="v num">'+f(psyc)+'</div></div>'
+       +'<div class="lrow"><div class="n">Ваш процент <em>'+(rate*100).toFixed(1).replace('.',',')+' %, как со всех поступлений</em></div><div class="v num">−'+f(psyc*rate)+'</div></div>'
+       +'<div class="lrow key"><div class="n">Останется на руки</div><div class="v num">'+f(psyc*(1-rate))+'</div></div>'
+       +'<div class="lrow sum"><div class="n">Чтобы на руки осталось нужное, умножайте на</div><div class="v num">×'+(1/(1-rate)).toFixed(2).replace('.',',')+'</div></div>';
     }
 
     // предельная ставка — из самой модели, а не константой
@@ -409,6 +407,10 @@ details[open] summary::before{content:"– "}
     set('sMarg', (marg*100).toFixed(1).replace('.',',')+' %');
 
     const payout = gap>0 ? gap/(1-marg) : 0;
+    set('lGross', payout>0 ? f(payout) : '0');
+    set('lGrossNote', payout>0
+      ? ('предельная ставка '+(marg*100).toFixed(1).replace('.',',')+' % — это и есть цифра наверху')
+      : 'доплачивать нечего');
     set('outComp', gap>0 ? f(payout) : '0');
     set('outNote', gap>0
       ? ('Недобор '+f(gap)+' до налога на гонорар, увеличенный на налог с самой доплаты. Выгода от ваших расходов ('+f(benefit)+') в зачёт не идёт — она ваша.')
