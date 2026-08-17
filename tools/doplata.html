@@ -150,6 +150,7 @@ details[open] summary::before{content:"– "}
       <p class="hint">Всё, что приходит сверх регулярных выплат</p>
       <div class="f"><label for="prem">Премии за год</label><input class="num" id="prem" type="number" value="13603" step="100"><span class="unit">€</span></div>
       <div class="f"><label for="comp">Доплата, пришедшая в этом году</label><input class="num" id="comp" type="number" value="7633" step="100"><span class="unit">€</span></div>
+      <div class="f"><label for="psyc">Возмещение психолога</label><input class="num" id="psyc" type="number" value="1400" step="100"><span class="unit">€</span></div>
     </div>
 
     <div class="card">
@@ -238,6 +239,16 @@ details[open] summary::before{content:"– "}
       </details>
 
       <details>
+        <summary>Возмещение психолога — надбавка не нужна</summary>
+        <div class="ledger" style="padding-left:0;padding-right:0">
+          <div class="lrow"><div class="n">Возмещение приходит как выручка и облагается</div><div class="v num" id="pDue">706</div></div>
+          <div class="lrow"><div class="n">Но психолог остаётся деловым расходом <em>его вычет гасит этот же налог</em></div><div class="v num" id="pSave">−706</div></div>
+          <div class="lrow sum"><div class="n">Чистый эффект на налог</div><div class="v num">0</div></div>
+        </div>
+        <p class="foot" style="margin:4px 0 12px">Возмещение <b class="num" id="pAmt">1 400</b> € ставит вас ровно туда же, где вы были бы, если бы счёт психолога был на эту сумму меньше — проверено в <code>verify.py</code>. Просить надбавку сверх не нужно: это дало бы больше, чем стоит сам счёт. Условие одно — психолога надо продолжать вычитать полностью.</p>
+      </details>
+
+      <details>
         <summary>Что сдвинет результат</summary>
         <div class="ledger" style="padding-left:0;padding-right:0">
           <div class="lrow"><div class="n">Предельная ставка на следующий евро</div><div class="v num" id="sMarg">49,5 %</div></div>
@@ -323,7 +334,8 @@ details[open] summary::before{content:"– "}
     const oldRate = oldPay>0 ? oldTaxMonth/oldPay : 0;
 
     const reg=pay*months+oldPay*oldMonths, prem=val('prem'), comp=val('comp');
-    const revenue=reg+prem+comp;
+    const psyc=val('psyc');
+    const revenue=reg+prem+comp+psyc;
     const rate = pay>0 ? taxMonth/pay : 0;
     const lijf=val('lijf');
     const r=tax(revenue, expenses, lijf);
@@ -368,13 +380,13 @@ details[open] summary::before{content:"– "}
     const above=Math.max(0, r.base-78426);
     set('lLadder', above>0 ? ('над порогом 78 426 — '+f(above)) : ('до порога 78 426 — '+f(78426-r.base)));
 
-    const gap=r.total-Z;
-    set('lGapName', gap>0 ? 'Не хватает' : 'Отложено лишнего');
-    set('lGap', f(Math.abs(gap)));
-
     // налог на гонорар как таковой: без ваших расходов и без lijfrente —
-    // ни то, ни другое не должно уменьшать то, что компенсирует клиент
+    // ни то, ни другое не должно уменьшать то, что компенсирует клиент.
+    // Доплата считается от НЕГО: выгода от расходов остаётся у вас.
     const bare=tax(revenue, 0, 0);
+    const gap=bare.total-Z;
+    set('lGapName', gap>0 ? 'Не хватает до налога на гонорар' : 'Отложено лишнего');
+    set('lGap', f(Math.abs(gap)));
     const fair=revenue>0 ? bare.total/revenue : 0;
     const benefit=bare.total-r.total;
     const buffer=Z-bare.total;
@@ -386,15 +398,21 @@ details[open] summary::before{content:"– "}
     set('lFair', (fair*100).toFixed(1).replace('.',',')+' %');
     set('lFairNote', 'фактически удержано в среднем '+(avgRate*100).toFixed(1).replace('.',',')+' %');
 
+    // возмещение психолога: облагается как выручка, но вычет расхода гасит тот же налог
+    const mPsy=(tax(revenue+1000, expenses, lijf).total - r.total)/1000;
+    set('pAmt', f(psyc));
+    set('pDue', f(psyc*mPsy));
+    set('pSave', '−'+f(psyc*mPsy));
+
     // предельная ставка — из самой модели, а не константой
-    const marg=(tax(revenue+1000, expenses, lijf).total - r.total)/1000;
+    const marg=(tax(revenue+1000, 0, 0).total - bare.total)/1000;
     set('sMarg', (marg*100).toFixed(1).replace('.',',')+' %');
 
     const payout = gap>0 ? gap/(1-marg) : 0;
     set('outComp', gap>0 ? f(payout) : '0');
     set('outNote', gap>0
-      ? ('Разрыв '+f(gap)+', увеличенный на налог с самой доплаты.')
-      : ('Заложено больше налога на '+f(-gap)+' — доплачивать нечего. Из них '+f(benefit)+' — выгода от ваших расходов, она ваша по праву; запас сверх налога на гонорар — '+f(Math.abs(buffer))+'.'));
+      ? ('Недобор '+f(gap)+' до налога на гонорар, увеличенный на налог с самой доплаты. Выгода от ваших расходов ('+f(benefit)+') в зачёт не идёт — она ваша.')
+      : ('Заложено больше налога на гонорар на '+f(-gap)+' — доплачивать нечего.'));
 
     const pill=g('outPill'), fill=g('gFill');
     const share=Math.min(1, payout/CEILING);
