@@ -205,8 +205,16 @@ details[open] summary::before{content:"– "}
         <div class="lrow"><div class="n">Взнос Zvw 4,85 % <em id="lZvwNote">база ограничена 79 409</em></div><div class="v num" id="lZvw">3 851</div></div>
 
         <div class="lrow key"><div class="n">Налог за год <em id="lEff">30,3 % от выручки</em></div><div class="v num" id="lTax">31 853</div></div>
-        <div class="lrow"><div class="n">Заложено <em id="lZnote">36,6 % от всех поступлений</em></div><div class="v num" id="lZ">38 561</div></div>
-        <div class="lrow sum"><div class="n" id="lGapName">Отложено лишнего</div><div class="v num" id="lGap">6 708</div></div>
+        <div class="lrow"><div class="n">Заложено <em id="lZnote">35,2 % от всех поступлений</em></div><div class="v num" id="lZ">37 058</div></div>
+        <div class="lrow sum"><div class="n" id="lGapName">Отложено лишнего</div><div class="v num" id="lGap">5 205</div></div>
+      </div>
+
+      <div class="ledger">
+        <p class="foot" style="margin:0 0 8px">Из этого «лишнего» часть — не запас, а ваша налоговая выгода от собственных расходов. Клиент компенсирует налог на гонорар; то, что вы сэкономили на психологе и подписках, остаётся вам.</p>
+        <div class="lrow"><div class="n">Налог, если бы расходов не было <em id="lBareNote">34,2 % от поступлений — это и есть ваш налог на гонорар</em></div><div class="v num" id="lBare">36 001</div></div>
+        <div class="lrow"><div class="n">Выгода от ваших расходов <em>ваша по праву</em></div><div class="v num" id="lBenefit">4 147</div></div>
+        <div class="lrow key"><div class="n" id="lBufName">Реальный запас</div><div class="v num" id="lBuf">1 043</div></div>
+        <div class="lrow sum"><div class="n">Точный процент к запросу <em id="lFairNote">вместо нынешних 35,2 %</em></div><div class="v num" id="lFair">34,2 %</div></div>
       </div>
 
       <details>
@@ -222,7 +230,7 @@ details[open] summary::before{content:"– "}
       <details open>
         <summary>Какой процент закладывать</summary>
         <div class="ledger" style="padding-left:0;padding-right:0" id="rateTable"></div>
-        <p class="foot" style="margin:4px 0 12px">Ставка растёт медленнее выручки: MKB-winstvrijstelling снимает 12,7 % прибыли ещё до шкалы. Пересматривать раз в год, в январе.</p>
+        <p class="foot" style="margin:4px 0 12px">Считается от налога на голый гонорар — без ваших расходов, чтобы клиент не экономил на них. Ставка всё равно растёт медленнее выручки: MKB-winstvrijstelling снимает 12,7 % прибыли ещё до шкалы. Пересматривать раз в год, в январе.</p>
       </details>
 
       <details>
@@ -338,6 +346,20 @@ details[open] summary::before{content:"– "}
     set('lGapName', gap>0 ? 'Не хватает' : 'Отложено лишнего');
     set('lGap', f(Math.abs(gap)));
 
+    // налог на гонорар как таковой: без ваших расходов и без lijfrente —
+    // ни то, ни другое не должно уменьшать то, что компенсирует клиент
+    const bare=tax(revenue, 0, 0);
+    const fair=revenue>0 ? bare.total/revenue : 0;
+    const benefit=bare.total-r.total;
+    const buffer=Z-bare.total;
+    set('lBare', f(bare.total));
+    set('lBareNote', (fair*100).toFixed(1).replace('.',',')+' % от поступлений — это и есть ваш налог на гонорар');
+    set('lBenefit', f(benefit));
+    set('lBufName', buffer>=0 ? 'Реальный запас' : 'Реально не хватает');
+    set('lBuf', f(Math.abs(buffer)));
+    set('lFair', (fair*100).toFixed(1).replace('.',',')+' %');
+    set('lFairNote', 'вместо нынешних '+(rate*100).toFixed(1).replace('.',',')+' %');
+
     // предельная ставка — из самой модели, а не константой
     const marg=(tax(revenue+1000, expenses, lijf).total - r.total)/1000;
     set('sMarg', (marg*100).toFixed(1).replace('.',',')+' %');
@@ -346,7 +368,7 @@ details[open] summary::before{content:"– "}
     set('outComp', gap>0 ? f(payout) : '0');
     set('outNote', gap>0
       ? ('Разрыв '+f(gap)+', увеличенный на налог с самой доплаты.')
-      : ('Заложено больше налога на '+f(-gap)+' — доплачивать нечего. Эти деньги остаются у вас: расходы уменьшают налог, но не то, что вы запрашиваете.'));
+      : ('Заложено больше налога на '+f(-gap)+' — доплачивать нечего. Из них '+f(benefit)+' — выгода от ваших расходов, она ваша по праву; запас сверх налога на гонорар — '+f(Math.abs(buffer))+'.'));
 
     const pill=g('outPill'), fill=g('gFill');
     const share=Math.min(1, payout/CEILING);
@@ -370,12 +392,12 @@ details[open] summary::before{content:"– "}
     if(tb){
       let html='';
       [70000,85000,100000,revenue,120000,140000].sort((a,b)=>a-b).forEach(R=>{
-        const eff=tax(R, expenses, lijf).total/R*100;
+        const eff=tax(R, 0, 0).total/R*100;
         const mine=Math.abs(R-revenue)<1;
         html+='<div class="lrow'+(mine?' key':'')+'"><div class="n">'+f(R)
           +(mine?' — ваша выручка':'')+'</div><div class="v num">'
           +eff.toFixed(1).replace('.',',')+' % → закладывать '
-          +(Math.round(eff)+2)+' %</div></div>';
+          +(Math.round(eff)+1)+' %</div></div>';
       });
       tb.innerHTML=html;
     }
