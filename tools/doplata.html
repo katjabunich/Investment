@@ -136,8 +136,9 @@ details[open] summary::before{content:"– "}
       <div class="f"><label for="sal">Из них зарплата</label><input class="num" id="sal" type="number" value="4300" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="book">Из них бухгалтерия</label><input class="num" id="book" type="number" value="135" step="5"><span class="unit">€</span></div>
       <div class="f"><label for="months">Месяцев по этой ставке</label><input class="num" id="months" type="number" value="12" step="1"><span class="unit">мес</span></div>
-      <div class="derived"><span>На налог откладывается</span><b class="num" id="dTaxMonth">2 565</b><span style="flex:0;color:var(--faint);font-size:11px">€/мес</span></div>
-      <div class="derived" style="border-top:0;padding-top:2px"><span>Заложено за год</span><b class="num" id="dTaxYear">30 780</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
+      <div class="derived"><span>Вы удерживаете</span><b class="num" id="dRate">36,6 %</b><span style="flex:0;color:var(--faint);font-size:11px">со всех<br>поступлений</span></div>
+      <div class="derived" style="border-top:0;padding-top:2px"><span>Заложено за год</span><b class="num" id="dTaxYear">38 561</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
+      <p class="hint" style="margin:10px 0 0">Процент выводится из разбивки выплаты и применяется ко всем поступлениям, включая премии и доплату.</p>
     </div>
 
     <div class="card">
@@ -201,9 +202,9 @@ details[open] summary::before{content:"– "}
         <div class="lrow neg"><div class="n">Arbeidskorting</div><div class="v num" id="lAk">−3 222</div></div>
         <div class="lrow"><div class="n">Взнос Zvw 4,85 % <em id="lZvwNote">база ограничена 79 409</em></div><div class="v num" id="lZvw">3 851</div></div>
 
-        <div class="lrow key"><div class="n">Налог за год</div><div class="v num" id="lTax">31 853</div></div>
-        <div class="lrow"><div class="n">Заложено в выплатах</div><div class="v num" id="lZ">30 780</div></div>
-        <div class="lrow sum"><div class="n" id="lGapName">Не хватает</div><div class="v num" id="lGap">1 073</div></div>
+        <div class="lrow key"><div class="n">Налог за год <em id="lEff">30,3 % от выручки</em></div><div class="v num" id="lTax">31 853</div></div>
+        <div class="lrow"><div class="n">Заложено <em id="lZnote">36,6 % от всех поступлений</em></div><div class="v num" id="lZ">38 561</div></div>
+        <div class="lrow sum"><div class="n" id="lGapName">Отложено лишнего</div><div class="v num" id="lGap">6 708</div></div>
       </div>
 
       <details>
@@ -214,6 +215,12 @@ details[open] summary::before{content:"– "}
           <div class="lrow sum"><div class="n">Налог Box 3, 36 %</div><div class="v num" id="b3Tax">2 471</div></div>
         </div>
         <p class="foot" style="margin:4px 0 12px">Приходит тем же счётом в июне, но клиент его не компенсирует — это налог на ваш капитал, к работе он не относится. Итого к уплате: <b class="num" id="b3Total">34 324</b> €.</p>
+      </details>
+
+      <details open>
+        <summary>Какой процент закладывать</summary>
+        <div class="ledger" style="padding-left:0;padding-right:0" id="rateTable"></div>
+        <p class="foot" style="margin:4px 0 12px">Ставка растёт медленнее выручки: MKB-winstvrijstelling снимает 12,7 % прибыли ещё до шкалы. Пересматривать раз в год, в январе.</p>
       </details>
 
       <details>
@@ -289,17 +296,19 @@ details[open] summary::before{content:"– "}
   function render(){
     const pay=val('pay'), sal=val('sal'), book=val('book'), months=val('months');
     const taxMonth=pay-sal-book;
-    const Z=taxMonth*months;
-    set('dTaxMonth', f(taxMonth));
-    set('dTaxYear', f(Z));
-
     const expenses=val('psy')+val('dutch')+val('subs')+val('other');
     set('dExp', f(expenses));
 
     const reg=pay*months, prem=val('prem'), comp=val('comp');
     const revenue=reg+prem+comp;
+    const rate = pay>0 ? taxMonth/pay : 0;
     const lijf=val('lijf');
     const r=tax(revenue, expenses, lijf);
+    const Z=rate*revenue;
+    set('dRate', (rate*100).toFixed(1).replace('.',',')+' %');
+    set('dTaxYear', f(Z));
+    set('lZnote', (rate*100).toFixed(1).replace('.',',')+' % от всех поступлений');
+    set('lEff', (r.total/revenue*100).toFixed(1).replace('.',',')+' % от выручки');
 
     set('lRegNote', f(pay)+' × '+months);
     set('lReg', f(reg));
@@ -353,6 +362,21 @@ details[open] summary::before{content:"– "}
 
     const maxGap=CEILING*(1-marg);
     set('sMaxGap', f(maxGap));
+
+    // таблица: какой процент закладывать при какой выручке
+    const tb=g('rateTable');
+    if(tb){
+      let html='';
+      [70000,85000,100000,revenue,120000,140000].sort((a,b)=>a-b).forEach(R=>{
+        const eff=tax(R, expenses, lijf).total/R*100;
+        const mine=Math.abs(R-revenue)<1;
+        html+='<div class="lrow'+(mine?' key':'')+'"><div class="n">'+f(R)
+          +(mine?' — ваша выручка':'')+'</div><div class="v num">'
+          +eff.toFixed(1).replace('.',',')+' % → закладывать '
+          +(Math.round(eff)+2)+' %</div></div>';
+      });
+      tb.innerHTML=html;
+    }
 
     // до какой премии можно дорасти
     let lo=0, hi=200000;
