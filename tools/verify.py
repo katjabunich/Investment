@@ -106,10 +106,10 @@ check("доля возврата Zalando 2026", ZAL_BACK / ZAL_OUT * 100, 62, to
 # ---------------------------------------------------------------------------
 # 5. ДОХОД: реконструкция
 # ---------------------------------------------------------------------------
-REVENUE, TAX, BIZ_NO_PSY, SIDE = 105_236, 30_957, 4_235, 500
+REVENUE, TAX, BIZ_NO_PSY, SIDE = 105_236, 30_409, 4_235, 500
 net_year = REVENUE - TAX - BIZ_NO_PSY
 income = net_year / 12 + SIDE
-check("чистый доход в месяц", income, 6337, tol=2)
+check("чистый доход в месяц", income, 6383, tol=2)
 note("психолог 7 200 в деловых расходах для налога, но из дохода НЕ вычтен — "
      "он стоит в личных расходах (600/мес). Двойного счёта нет")
 
@@ -120,8 +120,8 @@ try:
     r = compute(REVENUE, 11_435)
     check("налог по шкале (tax_zzp.py)", r["total"], TAX, tol=50)
     check("налогооблагаемая база", r["base"], 80_841, tol=50)
-    if r["base"] > 79_137:
-        note(f"база {r['base']:,.0f} выше порога 79 137 на {r['base'] - 79_137:,.0f} "
+    if r["base"] > 78_426:
+        note(f"база {r['base']:,.0f} выше порога 78 426 на {r['base'] - 78_426:,.0f} "
              "-> предельная ставка 49,5 % ТОЛЬКО на этот кусок, не на весь доход"
              .replace(",", " "))
 except Exception as e:                                    # noqa: BLE001
@@ -131,7 +131,7 @@ except Exception as e:                                    # noqa: BLE001
 # 6. ПОТОК И НОРМА СБЕРЕЖЕНИЙ
 # ---------------------------------------------------------------------------
 free = income - EXPENSES_TOTAL
-check("свободный поток", free, 3357, tol=2)
+check("свободный поток", free, 3403, tol=2)
 check("норма сбережений", free / income * 100, 53, tol=1, unit="%")
 CONTRIB = 2700
 if CONTRIB > free:
@@ -235,20 +235,20 @@ note("в июне доплатили 751 при тратах за границе
 # Вопрос был не «что урезать», а «сколько можно тратить, не сдвигая дату».
 # Потолок = доход − постоянный взнос 2 700 − взнос в lijfrente + возврат налога с него.
 INCOME_GROSS, FLAT, LIJF_YEAR = 6337, 2700, 6000
-TAX_NO_LIJF, TAX_WITH_LIJF = 30957, 28374        # tools/tax_zzp.py, шкала 2026
+TAX_NO_LIJF, TAX_WITH_LIJF = 30409, 27638        # tools/tax_zzp.py, шкала 2026
 lijf_saving = TAX_NO_LIJF - TAX_WITH_LIJF
-check("экономия налога от lijfrente 6 000", lijf_saving, 2582, tol=1)
+check("экономия налога от lijfrente 6 000", lijf_saving, 2771, tol=1)
 # Премии — БРУТТО. Проверяем, что нетто от них сходится с излишком.
 BONUSES_GROSS = 13_603
 tax_on_bonuses = TAX_NO_LIJF - compute(REVENUE - BONUSES_GROSS, 11_435)["total"]
-check("налог именно с премий", tax_on_bonuses, 5935, tol=2)
-check("средняя ставка на премии", tax_on_bonuses / BONUSES_GROSS * 100, 43.6,
+check("налог именно с премий", tax_on_bonuses, 6633, tol=2)
+check("средняя ставка на премии", tax_on_bonuses / BONUSES_GROSS * 100, 48.8,
       tol=0.2, unit="%")
-check("нетто от премий", BONUSES_GROSS - tax_on_bonuses, 7668, tol=2)
+check("нетто от премий", BONUSES_GROSS - tax_on_bonuses, 6970, tol=2)
 note("правило распределения премии: 56 % в IBKR, 44 % в резерв на налог "
      "(раньше стояло 58/42 — считалось по предельной ставке, а не по средней)")
 check("нетто от премий + базовый излишек 216", BONUSES_GROSS - tax_on_bonuses + 216,
-      7884, tol=2)
+      7186, tol=2)
 # 6 337 посчитан за вычетом Box 1 и ZVW, но НЕ Box 3. Box 3 платится тем же
 # счётом; если держать его в наличных (а не продавать бумаги), он уменьшает
 # денежный доход. Точная величина считается ниже, в блоке 11b.
@@ -261,18 +261,18 @@ check("норма сбережений после Box 3",
 note("модели FIRE списывают Box 3 с портфеля (forecast.py, с 2027). Если "
      "держать налог в наличных, даты выходят чуть лучше показанных, а не хуже")
 ceiling = INCOME_NET - FLAT - LIJF_YEAR / 12 + lijf_saving / 12
-check("потолок трат в месяц", ceiling, 3146, tol=1)
-check("свободный ход сверх факта", ceiling - EXPENSES_TOTAL, 166, tol=1)
-check("свободный ход за год", (ceiling - EXPENSES_TOTAL) * 12, 1995, tol=6)
+check("потолок трат в месяц", ceiling, 3162, tol=1)
+check("свободный ход сверх факта", ceiling - EXPENSES_TOTAL, 182, tol=1)
+check("свободный ход за год", (ceiling - EXPENSES_TOTAL) * 12, 2184, tol=6)
 note("расходы НИЖЕ потолка на 166/мес даже после Box 3 — сокращать нечего")
 # Излишек: премиальный, за вычетом полного резерва под ОБА налога.
 SURPLUS_YEAR = 7884 - BOX3_YEAR
 check("излишек за год после Box 3", SURPLUS_YEAR, 5413, tol=1)
-check("излишек с учётом вычета", SURPLUS_YEAR + lijf_saving, 7995, tol=1)
+check("излишек с учётом вычета", SURPLUS_YEAR + lijf_saving, 8184, tol=1)
 check("остаётся на IBKR сверх постоянного взноса", SURPLUS_YEAR + lijf_saving - LIJF_YEAR,
-      1995, tol=1)
+      2184, tol=1)
 check("чистая стоимость lijfrente в месяц", (LIJF_YEAR - lijf_saving) / 12,
-      285, tol=1)
+      269, tol=1)
 # Разрыв по срокам: взнос в декабре 2026, экономия приходит в июне 2027.
 EF_CURRENT, EF_TARGET = 19972, EXPENSES_TOTAL * 6
 have_by_dec = SURPLUS_YEAR / 12 * 5 + (EF_CURRENT - EF_TARGET) - 300
@@ -283,15 +283,19 @@ note("первый взнос 4 000 проходит и после поправ�
 # Грос-ап: компенсация сама облагается, поэтому платёж != покрытый налог.
 TAX_COMP = 7633                                  # платёж клиента 09.07.2026
 tax_on_comp = TAX_NO_LIJF - compute(REVENUE - TAX_COMP, 11_435)["total"]
-check("налог на саму компенсацию", tax_on_comp, 3308, tol=2)
-check("ставка на компенсацию", tax_on_comp / TAX_COMP * 100, 43.3, tol=0.2, unit="%")
+check("налог на саму компенсацию", tax_on_comp, 3750, tol=2)
+check("ставка на компенсацию", tax_on_comp / TAX_COMP * 100, 49.1, tol=0.2, unit="%")
 gross_rate = 1 - tax_on_comp / TAX_COMP
-check("чистыми от платежа 7 633", TAX_COMP * gross_rate, 4325, tol=2)
-check("платёж, чтобы покрыть разрыв 25 795 нетто", 25795 / gross_rate, 45520, tol=20)
+check("чистыми от платежа 7 633", TAX_COMP * gross_rate, 3883, tol=2)
+check("платёж, чтобы покрыть разрыв 25 795 нетто", 25795 / gross_rate, 50707, tol=30)
 note("правило грос-апа: чтобы после налога осталось X, перевести надо X × 1,76")
 
 
-def _steady(fee: float, expenses: float, z: float = 23324.0) -> tuple:
+Z_EMBEDDED = TAX_NO_LIJF - TAX_COMP              # 22 776/год = 1 898/мес
+check("заложено в месячные выплаты", Z_EMBEDDED, 22776, tol=1)
+
+
+def _steady(fee: float, expenses: float, z: float) -> tuple:
     """Равновесная компенсация: она входит в выручку и облагается сама."""
     comp = 7633.0
     for _ in range(60):
@@ -301,10 +305,10 @@ def _steady(fee: float, expenses: float, z: float = 23324.0) -> tuple:
 
 
 BASE_FEE = 97_603                                # регулярные 84 000 + премии
-_, comp_now = _steady(BASE_FEE, 11_435)
-check("равновесная компенсация сейчас", comp_now, 7632, tol=3)
-check("запас до потолка 10 000", 10_000 - comp_now, 2368, tol=3)
-_, comp_less = _steady(BASE_FEE, 11_435 - 2_400)
+_, comp_now = _steady(BASE_FEE, 11_435, Z_EMBEDDED)
+check("равновесная компенсация сейчас", comp_now, 7633, tol=3)
+check("запас до потолка 10 000", 10_000 - comp_now, 2367, tol=3)
+_, comp_less = _steady(BASE_FEE, 11_435 - 2_400, Z_EMBEDDED)
 check("компенсация при расходах на 2 400 меньше", comp_less, 9929, tol=3)
 check("запас при этом", 10_000 - comp_less, 71, tol=3)
 note("множитель ×1,96: компенсация облагается сама, поэтому рост налога "
@@ -337,8 +341,8 @@ note("при потере клиента и продаже квартиры (317
 # Подтверждено владелицей: компенсация = фактический налог − налог,
 # заложенный в месячные выплаты. Отсюда её касса от налога НЕ зависит.
 REG_BONUSES, BIZ_EXPENSES = 97_603, 11_435
-Z_EMBEDDED = TAX_NO_LIJF - TAX_COMP              # 23 324/год = 1 944/мес
-check("заложено в месячные выплаты", Z_EMBEDDED, 23324, tol=1)
+Z_EMBEDDED = TAX_NO_LIJF - TAX_COMP              # 22 776/год = 1 898/мес
+check("заложено в месячные выплаты", Z_EMBEDDED, 22776, tol=1)
 
 
 def _fixed_point(expenses: float, lijfrente: float = 0.0) -> tuple:
@@ -352,14 +356,14 @@ def _fixed_point(expenses: float, lijfrente: float = 0.0) -> tuple:
 
 
 CASH_BASE = _fixed_point(BIZ_EXPENSES)[2]
-check("касса при деловых расходах 11 435", CASH_BASE, 62844, tol=2)
-for lij in (0, 6000, 9000):
+check("касса при деловых расходах 11 435", CASH_BASE, 63392, tol=2)
+for lij in (0, 3000, 6000):
     check(f"касса не меняется при lijfrente {lij}",
           _fixed_point(BIZ_EXPENSES, lij)[2], CASH_BASE, tol=2)
 note("при ТАКОЙ базе клиент поглощает 100 % предельного налога — но эта "
      "база НЕ согласована: про личные вычеты договорённости нет")
 # База 1: компенсация считается до личных вычетов -> она остаётся 7 633.
-for lij, want in ((6000, 2583), (10000, 4274), (14400, 4274)):
+for lij, want in ((6000, 2771), (10000, 4016), (14400, 4016)):
     cash_b1 = 105_236 - compute(105_236, BIZ_EXPENSES, lij)["total"] - BIZ_EXPENSES
     cash_b2 = _fixed_point(BIZ_EXPENSES, lij)[2]
     check(f"цена неопределённости базы при lijfrente {lij}",
@@ -368,7 +372,7 @@ for lij, want in ((6000, 2583), (10000, 4274), (14400, 4274)):
 BOX3_Y, LIJ = 2471, 9500
 lij_back = (compute(105_236, BIZ_EXPENSES, 0)["total"]
             - compute(105_236, BIZ_EXPENSES, LIJ)["total"])
-check("возврат пенсии обратно в базу", lij_back, 4119, tol=2)
+check("возврат пенсии обратно в базу", lij_back, 4310, tol=2)
 
 
 def _position(add_back: float, add_box3: float) -> float:
@@ -384,16 +388,16 @@ def _position(add_back: float, add_box3: float) -> float:
 p1 = _position(0, BOX3_Y)              # отдать декларацию целиком
 p2 = _position(lij_back, BOX3_Y)       # вернуть пенсию, Box 3 оставить
 p3 = _position(lij_back, 0)            # налог с дохода по проекту
-check("позиция 1 — отдать декларацию целиком", p1, 62844, tol=3)
-check("позиция 2 — вернуть пенсию, Box 3 внутри", p2, 66963, tol=3)
-check("позиция 3 — налог с дохода по проекту", p3, 64492, tol=3)
-check("позиция 3 против позиции 1", p3 - p1, 1648, tol=3)
+check("позиция 1 — отдать декларацию целиком", p1, 63392, tol=3)
+check("позиция 2 — вернуть пенсию, Box 3 внутри", p2, 67702, tol=3)
+check("позиция 3 — налог с дохода по проекту", p3, 65231, tol=3)
+check("позиция 3 против позиции 1", p3 - p1, 1839, tol=3)
 check("честность стоит (позиция 3 против 2)", p3 - p2, -2471, tol=3)
 note("позиция 3 — единственная связная: деловые расходы внутри (это "
      "себестоимость работы), пенсия обратно, Box 3 исключён. То, что она "
      "дешевле позиции 2 на 2 471, и есть признак того, что она честная")
 # Деловые расходы — её, а не клиента: льготу за её расход даёт государство ей.
-for x, want in ((500, 244), (1500, 733), (3000, 1358), (4000, 1742)):
+for x, want in ((500, 244), (1500, 733), (3000, 1513), (4000, 1996)):
     saved = compute(105_236, BIZ_EXPENSES)["total"] - compute(105_236, BIZ_EXPENSES + x)["total"]
     check(f"экономия на деловом расходе {x}", saved, want, tol=2)
 note("вычет за телефон и пенсию принадлежит ЕЙ: клиент компенсирует налог "
@@ -412,10 +416,10 @@ note("клиент в Болгарии, только удалённо: нет к
 # Порог, за которым вычет снова работает на неё.
 threshold = next(L for L in range(0, 20000, 100)
                  if _fixed_point(BIZ_EXPENSES, L)[1] <= 0)
-check("порог, где компенсация обнуляется", threshold, 9900, tol=200)
+check("порог, где компенсация обнуляется", threshold, 8900, tol=200)
 gain = _fixed_point(BIZ_EXPENSES, 19350)[2] - _fixed_point(BIZ_EXPENSES, 10000)[2]
-check("ставка вычета выше порога", gain / (19350 - 10000) * 100, 43.9,
-      tol=0.5, unit="%")
+check("ставка вычета выше порога", gain / (19350 - 10000) * 100, 44.4,
+      tol=0.6, unit="%")
 note("оптимум lijfrente 10 000-14 400/год (дата 2041 - 51), а не 6 000 "
      "(2042 - 52) — при возврате налога, уходящем клиенту")
 note("бесплатный рычаг: переформулировать договорённость на «налог с "
@@ -431,36 +435,36 @@ REG, BONUSES = 84000, 13603
 check("выручка = регулярные + премии + компенсация",
       REG + BONUSES + TAX_COMP, REVENUE, tol=1)
 own_reserve = TAX_NO_LIJF - TAX_COMP
-check("накопить на налог самой за год", own_reserve, 23324, tol=1)
-check("то же в месяц", own_reserve / 12, 1944, tol=1)
+check("накопить на налог самой за год", own_reserve, 22776, tol=1)
+check("то же в месяц", own_reserve / 12, 1898, tol=1)
 # Box 3 приходит ТЕМ ЖЕ начислением, но клиент его не компенсирует.
 from box3 import compute as _box3                                  # noqa: E402
 BOX3_INV, BOX3_SAV = 160_000, 30_000            # оценка на срез 1 января 2026
 box3_tax = _box3(BOX3_INV, BOX3_SAV)["tax"]
 check("налог Box 3 за 2026 (срез 1 января)", box3_tax, 2471, tol=2)
-check("всё годовое начисление", TAX_NO_LIJF + box3_tax, 33428, tol=3)
+check("всё годовое начисление", TAX_NO_LIJF + box3_tax, 32880, tol=3)
 note("клиент компенсирует Box 1 и ZVW с гонорара, но НЕ Box 3 на капитал")
 # Положение на 1 августа 2026: 7 месяцев из 12 начислено.
 accrued = (TAX_NO_LIJF + box3_tax) * 7 / 12
 BALANCES = 39172
-check("начислено всего к 1 августа", accrued, 19500, tol=5)
+check("начислено всего к 1 августа", accrued, 19180, tol=5)
 check("отнесено на резерв", BALANCES - EF_CURRENT, 19200, tol=1)
-check("резерв против начисления", (BALANCES - EF_CURRENT) - accrued, -300, tol=5)
+check("резерв против начисления", (BALANCES - EF_CURRENT) - accrued, 20, tol=5)
 note("опережение по Box 1 (компенсация пришла лумпом в июле) съедено Box 3 — "
      "резерв идёт вровень, а не с запасом")
 note("belastingrente: voorlopige не подаётся, поэтому декларацию за 2026 "
      "подать ДО 1 МАЯ 2027 — иначе проценты бегут с 1 июля на ~33 500")
 # Верхняя ставка применяется НЕ ко всему доходу: над порогом торчит 1 704.
-BASE_2026, TOP_THRESHOLD = 80841, 79137
+BASE_2026, TOP_THRESHOLD = 80841, 78426
 check("сколько базы над порогом верхней ставки", BASE_2026 - TOP_THRESHOLD,
-      1704, tol=1)
-check("эффективная ставка от выручки", TAX_NO_LIJF / REVENUE * 100, 29.4,
+      2415, tol=1)
+check("эффективная ставка от выручки", TAX_NO_LIJF / REVENUE * 100, 28.9,
       tol=0.1, unit="%")
 # Лестница экономии считается вживую движком tax_zzp (импортирован в блоке 5),
 # а не переписывается числами: поменяется шкала — расхождение вылезет здесь.
 _base_tax = compute(REVENUE, 11_435, 0.0)["total"]
 check("налог без lijfrente сходится с моделью", _base_tax, TAX_NO_LIJF, tol=1)
-for amount, want_rate in ((1704, 49.5), (6000, 43.0), (19350, 43.6)):
+for amount, want_rate in ((2415, 49.5), (6000, 46.2), (19350, 44.7)):
     saved = _base_tax - compute(REVENUE, 11_435, float(amount))["total"]
     check(f"средняя ставка вычета на {amount}", saved / amount * 100,
           want_rate, tol=0.2, unit="%")

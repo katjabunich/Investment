@@ -8,8 +8,9 @@
 Отдельно показывает, что даёт взнос в lijfrente: у него двойной эффект —
 уменьшает базу Box 1 и выводит капитал из Box 3.
 
-ВНИМАНИЕ: параметры 2026 года приблизительные. Это ориентир для планирования
-резерва, а не декларация. Точную цифру даёт форма Belastingdienst.
+Параметры 2026 сверены с belastingdienst.nl (август 2026): шкала, обе
+скидки, Zvw. Это по-прежнему ориентир для планирования резерва, а не
+декларация — округления и частные обстоятельства даёт только форма.
 
     python3 tools/tax_zzp.py --revenue 101306 --expenses 11435
     python3 tools/tax_zzp.py --revenue 101306 --expenses 11435 --lijfrente 6000
@@ -28,9 +29,11 @@ import argparse
 #       urenregistratie — журнал часов. Если журнала нет и вычет снимут,
 #       налог вырастет на 587.
 #   MKB-winstvrijstelling 12,7 % — БЕЗ urencriterium, даётся всегда.
-#   algemene heffingskorting — убывает, при базе 80 841 равна нулю.
-#   arbeidskorting — убывает от 39 957, здесь 2 937 из максимальных 5 599.
-#   ZVW 5,26 % — база ограничена 77 000, поэтому взнос упёрся в потолок.
+#   algemene heffingskorting — убывает от 29 736, при базе 80 841 равна нулю.
+#   arbeidskorting — убывает от 45 592, здесь 3 390 из максимальных 5 685.
+#   Zvw 4,85 % — база 80 841 чуть выше потолка 79 409, поэтому взнос упёрся
+#       в потолок, НО запас всего 1 432: при меньшей прибыли Zvw снова
+#       начинает работать на пределе и добавляет 4,85 п.п. к предельной ставке.
 #
 # НЕ ПРИМЕНЯЕТСЯ И ЭТО ВЕРНО:
 #   startersaftrek 2 123 — только 3 раза за первые 5 лет предпринимательства.
@@ -49,25 +52,27 @@ import argparse
 #   начисления, и клиент её НЕ компенсирует — он компенсирует налог
 #   с гонорара. Оценка за 2026: ~2 500. См. docs/tax-reserve.md.
 #
-# --- параметры 2026 (ориентировочные) --------------------------------------
-BRACKETS = [(38_883, 0.3570), (79_137, 0.3756), (float("inf"), 0.4950)]
-ZELFSTANDIGENAFTREK = 1_200      # план поэтапного снижения; нужен urencriterium
+# --- параметры 2026 (СВЕРЕНЫ с belastingdienst.nl, август 2026) --------------------------------------
+# Все значения сверены с belastingdienst.nl и Belastingplan 2026 (август 2026).
+BRACKETS = [(38_883, 0.3575), (78_426, 0.3756), (float("inf"), 0.4950)]
+ZELFSTANDIGENAFTREK = 1_200      # 2025: 2 470 -> 2026: 1 200 -> 2027: 900
 STARTERSAFTREK = 0               # не начинающая: 3 года за первые 5 исчерпаны
 MKB_VRIJSTELLING = 0.127
-ZVW_RATE = 0.0526
-ZVW_MAX_BASE = 77_000
 
-AHK_MAX = 3_068                  # algemene heffingskorting
-AHK_START = 28_406               # выше этого убывает
-AHK_RATE = 0.06337
-AHK_ZERO = 76_817
+# Bijdrage Zvw: база — belastbare winst ПОСЛЕ ondernemersaftrek и MKB.
+ZVW_RATE = 0.0485                # 2025: 5,26 % -> 2026: 4,85 %
+ZVW_MAX_BASE = 79_409            # 2025: 75 864 -> 2026: 79 409
 
-AK_MAX = 5_599                   # arbeidskorting
-AK_TOP = 39_957                  # где достигает максимума
-AK_RATE = 0.0651                 # скорость убывания выше
-AK_ZERO = 124_934
+AHK_MAX = 3_115                  # algemene heffingskorting, 2025: 3 068
+AHK_START = 29_736               # выше этого убывает (по verzamelinkomen)
+AHK_RATE = 0.06398
+AHK_ZERO = 78_426
 
-# Box 3 — для оценки побочного эффекта lijfrente
+AK_MAX = 5_685                   # arbeidskorting, 2025: 5 599
+AK_TOP = 45_592                  # где достигает максимума
+AK_RATE = 0.06510                # скорость убывания выше
+AK_ZERO = 132_920
+
 BOX3_EFFECTIVE = 0.0216          # 6% вменённых x 36%
 
 
@@ -107,7 +112,7 @@ def compute(revenue: float, expenses: float, lijfrente: float = 0.0) -> dict:
     ahk = algemene_heffingskorting(base)
     ak = arbeidskorting(after_mkb)
     it_net = max(0.0, it - ahk - ak)
-    zvw = min(profit, ZVW_MAX_BASE) * ZVW_RATE
+    zvw = min(after_mkb, ZVW_MAX_BASE) * ZVW_RATE
 
     return {
         "revenue": revenue, "expenses": expenses, "profit": profit,
@@ -146,7 +151,7 @@ def report(r: dict, lijfrente: float = 0.0) -> None:
     print(f"  − algemene heffingskorting           {_f(-r['ahk'])}")
     print(f"  − arbeidskorting                     {_f(-r['ak'])}")
     print(f"  = подоходный к уплате                {_f(r['income_tax_net'])}")
-    print(f"  + взнос ZVW 5,26 %                   {_f(r['zvw'])}")
+    print(f"  + взнос Zvw 4,85 %                   {_f(r['zvw'])}")
     print("  " + "-" * 62)
     print(f"  ВСЕГО НАЛОГОВ                        {_f(r['total'])}")
     print(f"  Эффективная ставка от выручки        {r['total'] / r['revenue']:>11.1%}")
