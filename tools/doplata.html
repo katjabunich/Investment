@@ -1,0 +1,381 @@
+<title>Июльская доплата</title>
+
+<style>
+:root{
+  --paper:#F6F7F4; --surface:#FFFFFF; --sunk:#EDEFEA;
+  --ink:#17222B; --muted:#5A6875; --faint:#8B979F;
+  --line:#E0E3DE; --line2:#CBD1CA;
+  --accent:#14606B; --accent-soft:#DCEBEC;
+  --brass:#8E6A26; --ok:#2C6A4A; --warn:#9C3B2E;
+  --shadow:0 1px 2px rgba(23,34,43,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1417; --surface:#161F25; --sunk:#111A1F;
+    --ink:#E4E9EC; --muted:#94A3AD; --faint:#6D7C86;
+    --line:#243139; --line2:#31424C;
+    --accent:#4FA9B5; --accent-soft:#123136;
+    --brass:#C79A48; --ok:#58B37F; --warn:#D4796A;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1417; --surface:#161F25; --sunk:#111A1F;
+  --ink:#E4E9EC; --muted:#94A3AD; --faint:#6D7C86;
+  --line:#243139; --line2:#31424C;
+  --accent:#4FA9B5; --accent-soft:#123136;
+  --brass:#C79A48; --ok:#58B37F; --warn:#D4796A;
+  --shadow:none;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.num{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+
+.wrap{max-width:1020px;margin:0 auto;padding:30px 18px 70px}
+header{margin-bottom:22px}
+h1{margin:0;font:600 30px/1.1 ui-serif,Georgia,"Times New Roman",serif;letter-spacing:-.015em}
+.sub{margin:9px 0 0;color:var(--muted);font-size:13.5px;max-width:62ch}
+
+.cols{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:16px 15px;box-shadow:var(--shadow)}
+.card+.card{margin-top:14px}
+h2{margin:0 0 2px;font:600 12px/1.3 ui-sans-serif,system-ui,sans-serif;
+   text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+.hint{margin:0 0 13px;color:var(--faint);font-size:11.5px}
+
+.f{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.f:last-child{border-bottom:0}
+.f label{flex:1;font-size:13.5px;color:var(--muted);min-width:0}
+.f input{
+  width:96px;padding:6px 8px;text-align:right;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums;font-size:14px;
+  background:var(--sunk);color:var(--ink);
+  border:1px solid var(--line2);border-radius:3px;
+}
+.f input:focus{outline:2px solid var(--accent);outline-offset:1px;background:var(--surface)}
+.f .unit{width:34px;font-size:11px;color:var(--faint);text-align:left}
+
+.derived{display:flex;align-items:baseline;gap:10px;padding:9px 0 2px;margin-top:4px;border-top:2px solid var(--line2)}
+.derived span{flex:1;font-size:13px;color:var(--muted)}
+.derived b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums;font-size:16px;color:var(--accent)}
+
+/* результат */
+.result{background:var(--surface);border:1px solid var(--line2);border-radius:5px;overflow:hidden;box-shadow:var(--shadow)}
+.rhead{padding:20px 20px 18px;border-bottom:1px solid var(--line);display:flex;
+  align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.rlabel{font:600 11.5px/1.3 ui-sans-serif,system-ui,sans-serif;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin-bottom:8px}
+.rbig{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums;font-size:44px;line-height:1;font-weight:600;
+  letter-spacing:-.02em;color:var(--brass)}
+.rnote{margin-top:9px;font-size:12.5px;color:var(--muted);max-width:38ch}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:20px;
+  font-size:12.5px;font-weight:600;white-space:nowrap;border:1px solid}
+.pill i{width:7px;height:7px;border-radius:50%;flex:none}
+.pill.ok{color:var(--ok);border-color:var(--ok);background:transparent}
+.pill.ok i{background:var(--ok)}
+.pill.warn{color:var(--warn);border-color:var(--warn)}
+.pill.warn i{background:var(--warn)}
+
+.gauge{padding:16px 20px 20px;border-bottom:1px solid var(--line)}
+.gtrack{height:10px;border-radius:5px;background:var(--sunk);overflow:hidden;position:relative}
+.gfill{height:100%;border-radius:5px;transition:width .25s ease}
+.gscale{display:flex;justify-content:space-between;margin-top:7px;font-size:11px;color:var(--faint)}
+
+/* леджер */
+.ledger{padding:6px 20px 16px}
+.lrow{display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .n{flex:1;font-size:13.5px;min-width:0}
+.lrow .n em{font-style:normal;color:var(--faint);font-size:11.5px;display:block;margin-top:2px}
+.lrow .v{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap}
+.lrow.sum{border-top:2px solid var(--line2);border-bottom:0;margin-top:4px;padding-top:10px}
+.lrow.sum .n{font-weight:600}
+.lrow.sum .v{font-weight:600;font-size:16px}
+.lrow.neg .v{color:var(--warn)}
+.lrow.key{background:var(--accent-soft);margin:4px -20px;padding:9px 20px}
+.lrow.key .n{font-weight:600}
+.lrow.key .v{font-weight:600}
+.lrow .n small{color:var(--faint);font-size:11.5px}
+
+details{border-top:1px solid var(--line);padding:12px 20px 4px}
+summary{cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--accent);font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+ ";font-family:ui-monospace,monospace}
+details[open] summary::before{content:"– "}
+
+.foot{margin-top:20px;color:var(--faint);font-size:11.5px;line-height:1.65;max-width:70ch}
+.foot code{font-family:ui-monospace,monospace;font-size:11px}
+</style>
+
+<div class="wrap">
+
+<header>
+  <h1>Июльская доплата</h1>
+  <p class="sub">Сколько клиент доплатит следующим летом и уложится ли это в 10 000. Меняйте любые числа слева — всё пересчитывается сразу. Шкала 2026 года: три ступени, обе скидки, Zvw.</p>
+</header>
+
+<div class="cols">
+
+  <div>
+    <div class="card">
+      <h2>Ежемесячная выплата</h2>
+      <p class="hint">Из чего состоит то, что приходит 1-го и 15-го</p>
+      <div class="f"><label for="pay">Всего в месяц</label><input class="num" id="pay" type="number" value="7000" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="sal">Из них зарплата</label><input class="num" id="sal" type="number" value="4300" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="book">Из них бухгалтерия</label><input class="num" id="book" type="number" value="135" step="5"><span class="unit">€</span></div>
+      <div class="f"><label for="months">Месяцев по этой ставке</label><input class="num" id="months" type="number" value="12" step="1"><span class="unit">мес</span></div>
+      <div class="derived"><span>На налог откладывается</span><b class="num" id="dTaxMonth">2 565</b><span style="flex:0;color:var(--faint);font-size:11px">€/мес</span></div>
+      <div class="derived" style="border-top:0;padding-top:2px"><span>Заложено за год</span><b class="num" id="dTaxYear">30 780</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Остальные поступления</h2>
+      <p class="hint">Всё, что приходит сверх регулярных выплат</p>
+      <div class="f"><label for="prem">Премии за год</label><input class="num" id="prem" type="number" value="13603" step="100"><span class="unit">€</span></div>
+      <div class="f"><label for="comp">Доплата, пришедшая в этом году</label><input class="num" id="comp" type="number" value="7633" step="100"><span class="unit">€</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Деловые расходы за год</h2>
+      <p class="hint">Уменьшают прибыль, а значит и налог</p>
+      <div class="f"><label for="psy">Психолог</label><input class="num" id="psy" type="number" value="5400" step="100"><span class="unit">€</span></div>
+      <div class="f"><label for="dutch">Голландский</label><input class="num" id="dutch" type="number" value="1200" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="subs">Подписки и софт</label><input class="num" id="subs" type="number" value="1882" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="other">Прочее и техника</label><input class="num" id="other" type="number" value="0" step="100"><span class="unit">€</span></div>
+      <div class="derived"><span>Всего расходов</span><b class="num" id="dExp">8 482</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Пенсия и капитал</h2>
+      <p class="hint">Необязательно — влияет на налог отдельно</p>
+      <div class="f"><label for="lijf">Взнос в lijfrente</label><input class="num" id="lijf" type="number" value="0" step="500"><span class="unit">€</span></div>
+      <div class="f"><label for="inv">Инвестиции на 1 января</label><input class="num" id="inv" type="number" value="160000" step="5000"><span class="unit">€</span></div>
+      <div class="f"><label for="sav">Вклады на 1 января</label><input class="num" id="sav" type="number" value="30000" step="1000"><span class="unit">€</span></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="result">
+      <div class="rhead">
+        <div>
+          <div class="rlabel">Доплата от клиента следующим летом</div>
+          <div class="rbig num" id="outComp">2 200</div>
+          <p class="rnote" id="outNote">Разрыв 1 073, увеличенный на налог с самой доплаты.</p>
+        </div>
+        <div class="pill ok" id="outPill"><i></i><span id="outPillText">Под 10 000</span></div>
+      </div>
+
+      <div class="gauge">
+        <div class="gtrack"><div class="gfill" id="gFill" style="width:22%;background:var(--ok)"></div></div>
+        <div class="gscale"><span>0</span><span class="num" id="gMid">потолок 10 000</span></div>
+      </div>
+
+      <div class="ledger">
+        <div class="lrow"><div class="n">Регулярные выплаты <em id="lRegNote">7 000 × 12</em></div><div class="v num" id="lReg">84 000</div></div>
+        <div class="lrow"><div class="n">Премии</div><div class="v num" id="lPrem">13 603</div></div>
+        <div class="lrow"><div class="n">Доплата, пришедшая в этом году <em>тоже облагается</em></div><div class="v num" id="lComp">7 633</div></div>
+        <div class="lrow sum"><div class="n">Выручка</div><div class="v num" id="lRev">105 236</div></div>
+
+        <div class="lrow neg"><div class="n">Деловые расходы</div><div class="v num" id="lExp">−8 482</div></div>
+        <div class="lrow sum"><div class="n">Прибыль</div><div class="v num" id="lProfit">96 754</div></div>
+
+        <div class="lrow neg"><div class="n">Zelfstandigenaftrek <em>требует 1 225 часов в год</em></div><div class="v num">−1 200</div></div>
+        <div class="lrow neg"><div class="n">MKB-winstvrijstelling 12,7 %</div><div class="v num" id="lMkb">−12 133</div></div>
+        <div class="lrow neg" id="rowLijf" hidden><div class="n">Взнос в lijfrente</div><div class="v num" id="lLijf">0</div></div>
+        <div class="lrow sum"><div class="n">Налогооблагаемая база</div><div class="v num" id="lBase">83 421</div></div>
+
+        <div class="lrow"><div class="n">Налог по шкале <em id="lLadder"></em></div><div class="v num" id="lIt">31 224</div></div>
+        <div class="lrow neg"><div class="n">Algemene heffingskorting</div><div class="v num" id="lAhk">0</div></div>
+        <div class="lrow neg"><div class="n">Arbeidskorting</div><div class="v num" id="lAk">−3 222</div></div>
+        <div class="lrow"><div class="n">Взнос Zvw 4,85 % <em id="lZvwNote">база ограничена 79 409</em></div><div class="v num" id="lZvw">3 851</div></div>
+
+        <div class="lrow key"><div class="n">Налог за год</div><div class="v num" id="lTax">31 853</div></div>
+        <div class="lrow"><div class="n">Заложено в выплатах</div><div class="v num" id="lZ">30 780</div></div>
+        <div class="lrow sum"><div class="n" id="lGapName">Не хватает</div><div class="v num" id="lGap">1 073</div></div>
+      </div>
+
+      <details>
+        <summary>Налог Box 3 на капитал</summary>
+        <div class="ledger" style="padding-left:0;padding-right:0">
+          <div class="lrow"><div class="n">База на 1 января <em>минус льгота 59 357</em></div><div class="v num" id="b3Base">130 643</div></div>
+          <div class="lrow"><div class="n">Вменённый доход <em>инвестиции 6,00 % · вклады 1,28 %</em></div><div class="v num" id="b3Rend">6 865</div></div>
+          <div class="lrow sum"><div class="n">Налог Box 3, 36 %</div><div class="v num" id="b3Tax">2 471</div></div>
+        </div>
+        <p class="foot" style="margin:4px 0 12px">Приходит тем же счётом в июне, но клиент его не компенсирует — это налог на ваш капитал, к работе он не относится. Итого к уплате: <b class="num" id="b3Total">34 324</b> €.</p>
+      </details>
+
+      <details>
+        <summary>Что сдвинет результат</summary>
+        <div class="ledger" style="padding-left:0;padding-right:0">
+          <div class="lrow"><div class="n">Предельная ставка на следующий евро</div><div class="v num" id="sMarg">49,5 %</div></div>
+          <div class="lrow"><div class="n">Разрыв может дорасти до <em>тогда доплата упрётся в 10 000</em></div><div class="v num" id="sMaxGap">4 920</div></div>
+          <div class="lrow"><div class="n">Премии могут вырасти до <em>при прочих равных</em></div><div class="v num" id="sMaxPrem">31 900</div></div>
+          <div class="lrow"><div class="n">Каждая 1 000 расходов уменьшает налог на</div><div class="v num" id="sPer1000">495</div></div>
+        </div>
+      </details>
+    </div>
+
+    <p class="foot">
+      Параметры 2026 года сверены с belastingdienst.nl в августе 2026: шкала 35,75 % до 38 883, 37,56 % до 78 426, 49,50 % выше; zelfstandigenaftrek 1 200; MKB 12,7 %; algemene heffingskorting 3 115 с обнулением при 78 426; arbeidskorting 5 685 с убыванием от 45 592 по 6,51 %; Zvw 4,85 % с потолком базы 79 409; Box 3 — 36 %, льгота 59 357.
+      Доплата считается с грос-апом: она сама облагается, поэтому клиент переводит разрыв, делённый на единицу минус предельная ставка.
+      Это ориентир для планирования, а не декларация.
+    </p>
+  </div>
+
+</div>
+</div>
+
+<script>
+(function(){
+  const BRACKETS=[[38883,0.3575],[78426,0.3756],[Infinity,0.4950]];
+  const ZELF=1200, MKB=0.127;
+  const ZVW_RATE=0.0485, ZVW_CAP=79409;
+  const AHK_MAX=3115, AHK_START=29736, AHK_RATE=0.06398, AHK_ZERO=78426;
+  const AK_MAX=5685, AK_TOP=45592, AK_RATE=0.06510, AK_ZERO=132920;
+  const B3_ALLOW=59357, B3_RATE=0.36, B3_INV=0.0600, B3_SAV=0.0128;
+  const CEILING=10000;
+
+  const f=n=>Math.round(n).toLocaleString('ru-RU').replace(/ /g,' ');
+  const g=id=>document.getElementById(id);
+  const val=id=>{const v=parseFloat(g(id).value); return isFinite(v)?v:0;};
+  const set=(id,t)=>{const e=g(id); if(e) e.textContent=t;};
+
+  function scaleTax(base){
+    let tax=0, low=0;
+    for(const [hi,r] of BRACKETS){ if(base>low) tax+=(Math.min(base,hi)-low)*r; low=hi; }
+    return tax;
+  }
+  function ahk(base){
+    if(base<=AHK_START) return AHK_MAX;
+    if(base>=AHK_ZERO) return 0;
+    return Math.max(0, AHK_MAX-(base-AHK_START)*AHK_RATE);
+  }
+  function ak(inc){
+    if(inc<=AK_TOP) return AK_MAX;
+    if(inc>=AK_ZERO) return 0;
+    return Math.max(0, AK_MAX-(inc-AK_TOP)*AK_RATE);
+  }
+  function tax(revenue, expenses, lijf){
+    const profit=revenue-expenses;
+    const afterZelf=Math.max(0, profit-ZELF);
+    const afterMkb=afterZelf*(1-MKB);
+    const base=Math.max(0, afterMkb-lijf);
+    const it=scaleTax(base);
+    const a1=ahk(base), a2=ak(afterMkb);
+    const itNet=Math.max(0, it-a1-a2);
+    const zvw=Math.min(afterMkb, ZVW_CAP)*ZVW_RATE;
+    return {profit, afterZelf, afterMkb, base, it, ahk:a1, ak:a2, itNet, zvw, total:itNet+zvw};
+  }
+  function box3(inv,sav){
+    const total=inv+sav;
+    if(total<=B3_ALLOW) return {grond:0, rend:0, tax:0};
+    const share=(total-B3_ALLOW)/total;
+    const rend=(inv*B3_INV+sav*B3_SAV)*share;
+    return {grond:total-B3_ALLOW, rend, tax:rend*B3_RATE};
+  }
+
+  function render(){
+    const pay=val('pay'), sal=val('sal'), book=val('book'), months=val('months');
+    const taxMonth=pay-sal-book;
+    const Z=taxMonth*months;
+    set('dTaxMonth', f(taxMonth));
+    set('dTaxYear', f(Z));
+
+    const expenses=val('psy')+val('dutch')+val('subs')+val('other');
+    set('dExp', f(expenses));
+
+    const reg=pay*months, prem=val('prem'), comp=val('comp');
+    const revenue=reg+prem+comp;
+    const lijf=val('lijf');
+    const r=tax(revenue, expenses, lijf);
+
+    set('lRegNote', f(pay)+' × '+months);
+    set('lReg', f(reg));
+    set('lPrem', f(prem));
+    set('lComp', f(comp));
+    set('lRev', f(revenue));
+    set('lExp', '−'+f(expenses));
+    set('lProfit', f(r.profit));
+    set('lMkb', '−'+f(r.afterZelf-r.afterMkb));
+    g('rowLijf').hidden = lijf<=0;
+    set('lLijf', '−'+f(lijf));
+    set('lBase', f(r.base));
+    set('lIt', f(r.it));
+    set('lAhk', r.ahk>0 ? '−'+f(r.ahk) : '0');
+    set('lAk', '−'+f(r.ak));
+    set('lZvw', f(r.zvw));
+    set('lZvwNote', r.afterMkb>ZVW_CAP ? 'база упёрлась в потолок 79 409' : 'база '+f(r.afterMkb)+', потолок не достигнут');
+    set('lTax', f(r.total));
+    set('lZ', f(Z));
+
+    const above=Math.max(0, r.base-78426);
+    set('lLadder', above>0 ? ('над порогом 78 426 — '+f(above)) : ('до порога 78 426 — '+f(78426-r.base)));
+
+    const gap=r.total-Z;
+    set('lGapName', gap>0 ? 'Не хватает' : 'Отложено лишнего');
+    set('lGap', f(Math.abs(gap)));
+
+    // предельная ставка — из самой модели, а не константой
+    const marg=(tax(revenue+1000, expenses, lijf).total - r.total)/1000;
+    set('sMarg', (marg*100).toFixed(1).replace('.',',')+' %');
+
+    const payout = gap>0 ? gap/(1-marg) : 0;
+    set('outComp', gap>0 ? f(payout) : '0');
+    set('outNote', gap>0
+      ? ('Разрыв '+f(gap)+', увеличенный на налог с самой доплаты.')
+      : ('Заложено больше налога на '+f(-gap)+' — доплачивать нечего.'));
+
+    const pill=g('outPill'), fill=g('gFill');
+    const share=Math.min(1, payout/CEILING);
+    fill.style.width=(share*100).toFixed(1)+'%';
+    if(payout<=CEILING*0.8){
+      pill.className='pill ok'; set('outPillText','Под 10 000');
+      fill.style.background='var(--ok)';
+    } else if(payout<=CEILING){
+      pill.className='pill warn'; set('outPillText','Близко к потолку');
+      fill.style.background='var(--brass)';
+    } else {
+      pill.className='pill warn'; set('outPillText','Потолок пробит');
+      fill.style.background='var(--warn)';
+    }
+
+    const maxGap=CEILING*(1-marg);
+    set('sMaxGap', f(maxGap));
+
+    // до какой премии можно дорасти
+    let lo=0, hi=200000;
+    for(let i=0;i<60;i++){
+      const m=(lo+hi)/2;
+      const t2=tax(reg+m+comp, expenses, lijf).total;
+      const gp=t2-Z;
+      const p2=gp>0 ? gp/(1-((tax(reg+m+comp+1000, expenses, lijf).total-t2)/1000)) : 0;
+      if(p2<CEILING) lo=m; else hi=m;
+    }
+    set('sMaxPrem', f(lo));
+    set('sPer1000', f(r.total - tax(revenue, expenses+1000, lijf).total));
+
+    const b=box3(val('inv'), val('sav'));
+    set('b3Base', f(b.grond));
+    set('b3Rend', f(b.rend));
+    set('b3Tax', f(b.tax));
+    set('b3Total', f(r.total+b.tax));
+  }
+
+  document.querySelectorAll('input').forEach(el=>{
+    el.addEventListener('input', render);
+  });
+  render();
+})();
+</script>
