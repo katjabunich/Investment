@@ -238,14 +238,10 @@ details[open] summary::before{content:"– "}
         <p class="foot" style="margin:4px 0 12px">Считается от налога на голый гонорар — без ваших расходов, чтобы клиент не экономил на них. Ставка всё равно растёт медленнее выручки: MKB-winstvrijstelling снимает 12,7 % прибыли ещё до шкалы. Пересматривать раз в год, в январе.</p>
       </details>
 
-      <details>
-        <summary>Возмещение психолога — надбавка не нужна</summary>
-        <div class="ledger" style="padding-left:0;padding-right:0">
-          <div class="lrow"><div class="n">Возмещение приходит как выручка и облагается</div><div class="v num" id="pDue">706</div></div>
-          <div class="lrow"><div class="n">Но психолог остаётся деловым расходом <em>его вычет гасит этот же налог</em></div><div class="v num" id="pSave">−706</div></div>
-          <div class="lrow sum"><div class="n">Чистый эффект на налог</div><div class="v num">0</div></div>
-        </div>
-        <p class="foot" style="margin:4px 0 12px">Возмещение <b class="num" id="pAmt">1 400</b> € ставит вас ровно туда же, где вы были бы, если бы счёт психолога был на эту сумму меньше — проверено в <code>verify.py</code>. Просить надбавку сверх не нужно: это дало бы больше, чем стоит сам счёт. Условие одно — психолога надо продолжать вычитать полностью.</p>
+      <details open>
+        <summary>Возмещение психолога — налог прибавить</summary>
+        <div class="ledger" style="padding-left:0;padding-right:0" id="psyTable"></div>
+        <p class="foot" style="margin:4px 0 12px">Возмещение — такое же поступление, как гонорар: налог с него по вашей схеме платит клиент. Значит выставлять надо сумму, из которой после вашего процента останется нужное. Это обычное правило, никакого особого режима — остаток трует в июле.</p>
       </details>
 
       <details>
@@ -398,11 +394,15 @@ details[open] summary::before{content:"– "}
     set('lFair', (fair*100).toFixed(1).replace('.',',')+' %');
     set('lFairNote', 'фактически удержано в среднем '+(avgRate*100).toFixed(1).replace('.',',')+' %');
 
-    // возмещение психолога: облагается как выручка, но вычет расхода гасит тот же налог
-    const mPsy=(tax(revenue+1000, expenses, lijf).total - r.total)/1000;
-    set('pAmt', f(psyc));
-    set('pDue', f(psyc*mPsy));
-    set('pSave', '−'+f(psyc*mPsy));
+    // возмещение психолога: чтобы в кармане осталось нужное, выставить с грос-апом
+    const pt=g('psyTable');
+    if(pt){
+      const gross = rate<1 ? psyc/(1-rate) : psyc;
+      pt.innerHTML=
+        '<div class="lrow"><div class="n">Нужно получить на руки</div><div class="v num">'+f(psyc)+'</div></div>'
+       +'<div class="lrow"><div class="n">Ваш процент <em>'+(rate*100).toFixed(1).replace('.',',')+' %, как со всех поступлений</em></div><div class="v num">'+f(gross-psyc)+'</div></div>'
+       +'<div class="lrow key"><div class="n">Выставить клиенту</div><div class="v num">'+f(gross)+'</div></div>';
+    }
 
     // предельная ставка — из самой модели, а не константой
     const marg=(tax(revenue+1000, 0, 0).total - bare.total)/1000;
