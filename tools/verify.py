@@ -106,10 +106,10 @@ check("доля возврата Zalando 2026", ZAL_BACK / ZAL_OUT * 100, 62, to
 # ---------------------------------------------------------------------------
 # 5. ДОХОД: реконструкция
 # ---------------------------------------------------------------------------
-REVENUE, TAX, BIZ_NO_PSY, SIDE = 102_836, 32_236, 4_235, 500
+REVENUE, TAX, BIZ_NO_PSY, SIDE = 102_836, 33_084, 4_235, 500
 net_year = REVENUE - TAX - BIZ_NO_PSY
 income = net_year / 12 + SIDE
-check("чистый доход в месяц", income, 6030, tol=2)
+check("чистый доход в месяц", income, 5960, tol=2)
 note("психолог 7 200 в деловых расходах для налога, но из дохода НЕ вычтен — "
      "он стоит в личных расходах (600/мес). Двойного счёта нет")
 
@@ -131,7 +131,7 @@ except Exception as e:                                    # noqa: BLE001
 # 6. ПОТОК И НОРМА СБЕРЕЖЕНИЙ
 # ---------------------------------------------------------------------------
 free = income - EXPENSES_TOTAL
-check("свободный поток", free, 3050, tol=2)
+check("свободный поток", free, 2980, tol=2)
 check("норма сбережений", free / income * 100, 50.6, tol=1, unit="%")
 CONTRIB = 2700
 if CONTRIB > free:
@@ -235,20 +235,20 @@ note("в июне доплатили 751 при тратах за границе
 # Вопрос был не «что урезать», а «сколько можно тратить, не сдвигая дату».
 # Потолок = доход − постоянный взнос 2 700 − взнос в lijfrente + возврат налога с него.
 INCOME_GROSS, FLAT, LIJF_YEAR = 6337, 2700, 6000
-TAX_NO_LIJF, TAX_WITH_LIJF = 32236, 29079        # tools/tax_zzp.py, шкала 2026
+TAX_NO_LIJF, TAX_WITH_LIJF = 33084, 29079        # tools/tax_zzp.py, шкала 2026
 lijf_saving = TAX_NO_LIJF - TAX_WITH_LIJF
-check("экономия налога от lijfrente 6 000", lijf_saving, 3157, tol=1)
+check("экономия налога от lijfrente 6 000", lijf_saving, 4005, tol=1)
 # Премии — БРУТТО. Проверяем, что нетто от них сходится с излишком.
 BONUSES_GROSS = 13_603
 tax_on_bonuses = TAX_NO_LIJF - compute(REVENUE - BONUSES_GROSS, 8_482)["total"]
-check("налог именно с премий", tax_on_bonuses, 7915, tol=2)
-check("средняя ставка на премии", tax_on_bonuses / BONUSES_GROSS * 100, 58.2,
+check("налог именно с премий", tax_on_bonuses, 8028, tol=2)
+check("средняя ставка на премии", tax_on_bonuses / BONUSES_GROSS * 100, 59,
       tol=0.2, unit="%")
-check("нетто от премий", BONUSES_GROSS - tax_on_bonuses, 5688, tol=2)
+check("нетто от премий", BONUSES_GROSS - tax_on_bonuses, 5575, tol=2)
 note("правило распределения премии: 56 % в IBKR, 44 % в резерв на налог "
      "(раньше стояло 58/42 — считалось по предельной ставке, а не по средней)")
 check("нетто от премий + базовый излишек 216", BONUSES_GROSS - tax_on_bonuses + 216,
-      5904, tol=2)
+      5791, tol=2)
 # 6 337 посчитан за вычетом Box 1 и ZVW, но НЕ Box 3. Box 3 платится тем же
 # счётом; если держать его в наличных (а не продавать бумаги), он уменьшает
 # денежный доход. Точная величина считается ниже, в блоке 11b.
@@ -261,18 +261,18 @@ check("норма сбережений после Box 3",
 note("модели FIRE списывают Box 3 с портфеля (forecast.py, с 2027). Если "
      "держать налог в наличных, даты выходят чуть лучше показанных, а не хуже")
 ceiling = INCOME_NET - FLAT - LIJF_YEAR / 12 + lijf_saving / 12
-check("потолок трат в месяц", ceiling, 3194, tol=1)
-check("свободный ход сверх факта", ceiling - EXPENSES_TOTAL, 214, tol=1)
-check("свободный ход за год", (ceiling - EXPENSES_TOTAL) * 12, 2570, tol=6)
+check("потолок трат в месяц", ceiling, 3265, tol=1)
+check("свободный ход сверх факта", ceiling - EXPENSES_TOTAL, 285, tol=1)
+check("свободный ход за год", (ceiling - EXPENSES_TOTAL) * 12, 3418, tol=6)
 note("расходы НИЖЕ потолка на 166/мес даже после Box 3 — сокращать нечего")
 # Излишек: премиальный, за вычетом полного резерва под ОБА налога.
 SURPLUS_YEAR = 7884 - BOX3_YEAR
 check("излишек за год после Box 3", SURPLUS_YEAR, 5413, tol=1)
-check("излишек с учётом вычета", SURPLUS_YEAR + lijf_saving, 8570, tol=1)
+check("излишек с учётом вычета", SURPLUS_YEAR + lijf_saving, 9418, tol=1)
 check("остаётся на IBKR сверх постоянного взноса", SURPLUS_YEAR + lijf_saving - LIJF_YEAR,
-      2570, tol=1)
+      3418, tol=1)
 check("чистая стоимость lijfrente в месяц", (LIJF_YEAR - lijf_saving) / 12,
-      237, tol=1)
+      166, tol=1)
 # Разрыв по срокам: взнос в декабре 2026, экономия приходит в июне 2027.
 EF_CURRENT, EF_TARGET = 19972, EXPENSES_TOTAL * 6
 have_by_dec = SURPLUS_YEAR / 12 * 5 + (EF_CURRENT - EF_TARGET) - 300
@@ -283,11 +283,11 @@ note("первый взнос 4 000 проходит и после поправ�
 # Грос-ап: компенсация сама облагается, поэтому платёж != покрытый налог.
 TAX_COMP = 7633                                  # платёж клиента 09.07.2026
 tax_on_comp = TAX_NO_LIJF - compute(REVENUE - TAX_COMP, 8_482)["total"]
-check("налог на саму компенсацию", tax_on_comp, 4320, tol=2)
-check("ставка на компенсацию", tax_on_comp / TAX_COMP * 100, 56.6, tol=0.2, unit="%")
+check("налог на саму компенсацию", tax_on_comp, 4382, tol=2)
+check("ставка на компенсацию", tax_on_comp / TAX_COMP * 100, 57.4, tol=0.2, unit="%")
 gross_rate = 1 - tax_on_comp / TAX_COMP
-check("чистыми от платежа 7 633", TAX_COMP * gross_rate, 3313, tol=2)
-check("платёж, чтобы покрыть разрыв 25 795 нетто", 25795 / gross_rate, 59423, tol=30)
+check("чистыми от платежа 7 633", TAX_COMP * gross_rate, 3251, tol=2)
+check("платёж, чтобы покрыть разрыв 25 795 нетто", 25795 / gross_rate, 60571, tol=30)
 note("правило грос-апа: чтобы после налога осталось X, перевести надо X × 1,76")
 # ---------------------------------------------------------------------------
 # 11b. СКОЛЬКО ЗАКЛАДЫВАЕТСЯ И СКОЛЬКО ДОЛЖНО ЗАКЛАДЫВАТЬСЯ
@@ -332,27 +332,27 @@ check("MKB 12,7 % берётся после ondernemersaftrek",
 check("надбавка tariefsaanpassing", _r["correctie"], 1556, tol=2)
 check("она же как 11,94 % от вычетов", 0.1194 * _r["posten"],
       _r["correctie"], tol=1)
-check("arbeidskorting при базе 81 323", _r["ak"], 3359, tol=2)
+check("arbeidskorting от прибыли, а не от базы", _r["ak"], 2511, tol=3)
 check("arbeidskorting вручную по таблице 2026",
-      5685 - 0.0651 * (_r["after_mkb"] - 45_592), _r["ak"], tol=1)
+      5685 - 0.0651 * (_r["profit"] - 45_592), _r["ak"], tol=1)
 check("algemene heffingskorting обнулена выше 78 426", _r["ahk"], 0, tol=0)
 note("tariefsaanpassing была пропущена в прежних расчётах — она добавляет 1 556")
 
 TAX_ACTUAL = _r["total"]
 TAX_BARE = compute(REVENUE_FIX, 0.0)["total"]
-check("налог при выручке 102 836", TAX_ACTUAL, 32236, tol=2)
-check("налог, если бы расходов не было", TAX_BARE, 36512, tol=2)
-check("справедливый процент к запросу", TAX_BARE / REVENUE_FIX * 100, 35.5,
+check("налог при выручке 102 836", TAX_ACTUAL, 33084, tol=2)
+check("налог, если бы расходов не было", TAX_BARE, 37430, tol=2)
+check("справедливый процент к запросу", TAX_BARE / REVENUE_FIX * 100, 36.4,
       tol=0.1, unit="%")
 note("считать процент надо от налога на голый гонорар: её расходы уменьшают "
      "её налог, но не то, что она запрашивает у клиента")
-check("выгода от её расходов", TAX_BARE - TAX_ACTUAL, 4276, tol=3)
-check("недобор против справедливого", TAX_BARE - Z_FIX, 953, tol=4)
+check("выгода от её расходов", TAX_BARE - TAX_ACTUAL, 4346, tol=3)
+check("недобор против справедливого", TAX_BARE - Z_FIX, 1872, tol=4)
 check("доплаты в июле 2027 нет", max(0.0, TAX_ACTUAL - Z_FIX), 0, tol=0)
-check("по кассе заложено больше налога", Z_FIX - TAX_ACTUAL, 3322, tol=4)
+check("по кассе заложено больше налога", Z_FIX - TAX_ACTUAL, 2474, tol=4)
 note("заложено 35 558 против налога 32 236: доплаты не будет, но справедливый "
      "процент 35,5 % выше фактически удержанных 34,6 %")
-for _rev, _pct in ((70_000, 26.9), (90_000, 33.2), (120_000, 37.6), (140_000, 39.5)):
+for _rev, _pct in ((70_000, 27.9), (90_000, 34.1), (120_000, 38.5), (140_000, 40.0)):
     check(f"процент к запросу при выручке {_rev}",
           compute(_rev, 0.0)["total"] / _rev * 100, _pct, tol=0.1, unit="%")
 note("калькулятор для самостоятельного пересчёта: tools/doplata.html")
@@ -384,7 +384,7 @@ J_KIA = round(J_ACTIVA * 0.28)
 check("KIA 28 %", J_KIA, 834, tol=0)
 check("база сходится с декларацией",
       (81_110 - 2_470 - 2_123 - J_KIA) * (1 - 0.127), 66_068, tol=5)
-check("Box 1 по модели против декларации", 19_771, 20_677 - 877, tol=30)
+check("Box 1 2025: модель против декларации", 20_681, 20_677, tol=10)
 note("расхождение 29 евро — модель 2025 подтверждена отчётностью и декларацией")
 
 RATE25 = 0.338
@@ -410,7 +410,7 @@ _out = _sp.run([sys.executable, "tools/check2025.py"],
 check("прогон 2025 отработал", 1 if "ВСЕГО (без Box 3)" in _out else 0, 1, tol=0)
 from tax_zzp import YEARS as _Y
 _P25 = _Y[2025]
-_base25 = (81_110 - 2_470 - 2_123 - 834) * (1 - _P25["MKB_VRIJSTELLING"])
+_base25 = (81_110 - 2_470 - 2_123 - 837) * (1 - _P25["MKB_VRIJSTELLING"])
 check("база 2025 по модели", _base25, 66_068, tol=5)
 check("Zvw 2025 по модели", min(_base25, _P25["ZVW_MAX_BASE"]) * _P25["ZVW_RATE"],
       3_475, tol=2)
@@ -419,18 +419,20 @@ for _hi, _r in _P25["BRACKETS"]:
     if _base25 > _lo:
         _sc += (min(_base25, _hi) - _lo) * _r
     _lo = _hi
-_posten25 = 2_470 + 2_123 + (81_110 - 2_470 - 2_123 - 834) * _P25["MKB_VRIJSTELLING"]
+_posten25 = 2_470 + 2_123 + (81_110 - 2_470 - 2_123 - 837) * _P25["MKB_VRIJSTELLING"]
 _corr25 = _P25["TARIEFSAANPASSING"] * min(
     _posten25, max(0.0, _base25 + _posten25 - _P25["TARIEF_THRESHOLD"]))
 _ahk25 = max(0.0, _P25["AHK_MAX"] - (_base25 - _P25["AHK_START"]) * _P25["AHK_RATE"])
-_ak25 = max(0.0, _P25["AK_MAX"] - (_base25 - _P25["AK_TOP"]) * _P25["AK_RATE"])
+_ak25 = max(0.0, _P25["AK_MAX"] - ((81_110 - 837) - _P25["AK_TOP"]) * _P25["AK_RATE"])
 _box1_25 = _sc + _corr25 - _ahk25 - _ak25
-check("Box 1 2025 по модели", _box1_25, 19_800, tol=50)
+check("Box 1 2025 по модели", _box1_25, 20_677, tol=10)
 check("всего 2025 без Box 3 по модели",
       _box1_25 + min(_base25, _P25["ZVW_MAX_BASE"]) * _P25["ZVW_RATE"],
-      23_275, tol=50)
-note("ошибка модели на реальной декларации 41 EUR из 23 275 = 0,18 % — "
-     "значит расчёту на 2026 можно верить")
+      24_152, tol=10)
+note("ошибка модели на реальной декларации 5 EUR из 24 152 = 0,02 % — "
+     "сходятся все строки поштучно: KIA, tariefsaanpassing, обе скидки, Zvw")
+note("и это доказывает, что 20 677 — это Box 1, а Box 3 877 идёт отдельно: "
+     "иначе итог разошёлся бы на 881")
 note("параметры 2025 сверены с belastingdienst.nl: шкала, обе скидки, Zvw, "
      "tariefsaanpassing 12,02 %")
 
@@ -443,18 +445,18 @@ check("выручка 2026 вместе с психологом", REVENUE_ALL, 1
 Z_ALL = Z_FIX + HOLD_RATE * PSY_GROSS
 check("заложено за год вместе с психологом", Z_ALL, 36319, tol=3)
 BARE_ALL = compute(REVENUE_ALL, 0.0)["total"]
-check("налог на голый гонорар", BARE_ALL, 37601, tol=3)
+check("налог на голый гонорар", BARE_ALL, 38537, tol=3)
 GAP_ALL = BARE_ALL - Z_ALL
-check("НЕ ХВАТАЕТ", GAP_ALL, 1282, tol=5)
+check("НЕ ХВАТАЕТ", GAP_ALL, 2218, tol=5)
 _margA = (compute(REVENUE_ALL + 1000, 0.0)["total"] - BARE_ALL) / 1000
-check("предельная ставка на базе гонорара", _margA * 100, 50.4, tol=0.2, unit="%")
-check("ДОПЛАТА В ИЮЛЕ 2027 без грос-апа", GAP_ALL, 1282, tol=5)
-check("запас до потолка 10 000", 10000 - GAP_ALL, 8718, tol=5)
+check("предельная ставка на базе гонорара", _margA * 100, 51.2, tol=0.2, unit="%")
+check("ДОПЛАТА В ИЮЛЕ 2027 без грос-апа", GAP_ALL, 2218, tol=5)
+check("запас до потолка 10 000", 10000 - GAP_ALL, 7782, tol=5)
 note("наверху калькулятора стоит доплата С грос-апом, в выкладке — сам "
      "недобор; это одна и та же величина, разница только в налоге "
      "с самой доплаты")
 check("фактический налог при её расходах",
-      compute(REVENUE_ALL, EXP_ACTUAL)["total"], 33325, tol=3)
+      compute(REVENUE_ALL, EXP_ACTUAL)["total"], 34191, tol=3)
 
 # --- откуда берётся «не хватает»: построчно ---------------------------------
 note("НЕ ХВАТАЕТ 1 282 — ЭТО РАЗНИЦА ДВУХ ПРОЦЕНТОВ ОТ ОДНОЙ И ТОЙ ЖЕ СУММЫ")
@@ -465,7 +467,7 @@ _lines = [("регулярные 7 000 x 10,5", 7000 * NEW_M, 2465 * NEW_M),
           ("возмещение психолога", PSY_GROSS, HOLD_RATE * PSY_GROSS)]
 check("сумма строк = выручка", sum(a for _, a, _ in _lines), REVENUE_ALL, tol=2)
 check("сумма удержаний = заложено", sum(z for _, _, z in _lines), Z_ALL, tol=2)
-check("налог на гонорар в процентах", BARE_ALL / REVENUE_ALL * 100, 35.8,
+check("налог на гонорар в процентах", BARE_ALL / REVENUE_ALL * 100, 36.7,
       tol=0.1, unit="%")
 check("удержано в процентах", Z_ALL / REVENUE_ALL * 100, 34.6, tol=0.1, unit="%")
 check("разница процентов даёт недобор",
@@ -474,18 +476,18 @@ note("ГРОС-АП НУЖЕН: НАЛОГ БЕРЁТСЯ В МОМЕНТ ПОС
 note("иначе она платит налог с доплаты вперёд из своих, а компенсацию "
      "получает через год — договорённость не про то, чтобы она "
      "кредитовала клиента")
-check("налог с самой доплаты", GAP_ALL / (1 - _margA) - GAP_ALL, 1303, tol=6)
+check("налог с самой доплаты", GAP_ALL / (1 - _margA) - GAP_ALL, 2331, tol=6)
 
 # --- нестыковка внутри самой схемы: две разные ставки для одних денег -------
 note("СЧЁТ ГРОС-АПИТСЯ ПО 50,4 %, А ОТКЛАДЫВАЕТСЯ С НЕГО 35,2 %")
-check("налог с доплаты 7 633, пришедшей в 2026", TAX_COMP * _margA, 3848, tol=5)
+check("налог с доплаты 7 633, пришедшей в 2026", TAX_COMP * _margA, 3911, tol=5)
 check("отложено с неё по её проценту", TAX_COMP * HOLD_RATE, 2688, tol=2)
 check("разница осела сейчас и всплыла разрывом потом",
-      TAX_COMP * (_margA - HOLD_RATE), 1160, tol=5)
+      TAX_COMP * (_margA - HOLD_RATE), 1223, tol=5)
 _Z_consistent = (JAN_HOLD * OLD_M + TAX_MONTH_NET * NEW_M
                  + HOLD_RATE * (BONUSES_GROSS + PSY_GROSS) + TAX_COMP * _margA)
-check("резерв, если с доплаты откладывать по предельной", _Z_consistent, 37479, tol=5)
-check("тогда разрыв почти нулевой", BARE_ALL - _Z_consistent, 122, tol=5)
+check("резерв, если с доплаты откладывать по предельной", _Z_consistent, 37542, tol=5)
+check("тогда разрыв почти нулевой", BARE_ALL - _Z_consistent, 995, tol=5)
 note("то есть разрыв 1 282 почти целиком — следствие того, что с прошлогодней "
      "доплаты отложили 35,2 % вместо 50,4 %. Если сравнять ставки, "
      "июльские доплаты сойдут почти к нулю")
@@ -507,13 +509,13 @@ note("если бы взнос уменьшал базу клиента, нал�
 note("ПРОВЕРКА ДЕНЬГАМИ: ПОЧЕМУ ДОПЛАТА ТАКАЯ МАЛЕНЬКАЯ")
 _payout = GAP_ALL   # грос-апа нет: налог с доплаты подберёт следующий цикл
 _rest = Z_ALL - TAX_ALL if False else Z_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"]
-check("остаток резерва после уплаты налога", _rest, 2994, tol=4)
-check("доплата в июле 2027", _payout, 1282, tol=5)
-check("итого остаётся у неё", _rest + _payout, 4276, tol=6)
+check("остаток резерва после уплаты налога", _rest, 2128, tol=4)
+check("доплата в июле 2027", _payout, 2218, tol=5)
+check("итого остаётся у неё", _rest + _payout, 4346, tol=6)
 check("её формула: расходы x предельная ставка",
-      EXP_ACTUAL * _margA, 4276, tol=6)
+      EXP_ACTUAL * _margA, 4346, tol=6)
 check("и то же как разность налогов",
-      BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"], 4276, tol=3)
+      BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"], 4346, tol=3)
 check("все три способа совпадают",
       _rest + _payout,
       BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"], tol=1)
@@ -521,7 +523,7 @@ note("доплата мала потому, что 2 994 выгоды уже л�
      "36 319 против фактического налога 33 325. Доплата добавляет ровно "
      "недостающие 1 282")
 check("без доплаты недополучила бы",
-      (BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"]) - _rest, 1282, tol=5)
+      (BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"]) - _rest, 2218, tol=5)
 
 # --- множитель запроса: сколько просить, чтобы на руки осталось нужное ------
 note("МНОЖИТЕЛЬ ЗАПРОСА ДЛЯ ПРЕМИИ И ЛЮБОГО РАЗОВОГО СЧЁТА")
@@ -567,7 +569,7 @@ SALARY_MONTH, TAX_MONTH = 4300, 2700
 check("выплата в месяц", SALARY_MONTH + TAX_MONTH, 7000, tol=0)
 Z_EMBEDDED = TAX_MONTH * 12
 check("заложено за год", Z_EMBEDDED, 32400, tol=0)
-check("компенсация за 2026", TAX_NO_LIJF - Z_EMBEDDED, -164, tol=2)
+check("компенсация за 2026", TAX_NO_LIJF - Z_EMBEDDED, 684, tol=2)
 # Уточнённые данные августа 2026: бухгалтерия 135/мес внутри выплаты,
 # психолога нет в июле-сентябре, голландский кончается на 1 200.
 TAX_MONTH_NET = 7000 - 4300 - 135
@@ -577,12 +579,12 @@ check("заложено за год по факту", Z_ACTUAL, 30780, tol=0)
 EXP_ACTUAL = 9 * 600 + 1200 + 1425 + 424 + 33   # 424 — бухгалтерия и декларация
 check("деловые расходы 2026 по факту", EXP_ACTUAL, 8482, tol=0)
 TAX_ACTUAL = compute(REVENUE, EXP_ACTUAL)["total"]
-check("налог при уточнённых расходах", TAX_ACTUAL, 32236, tol=2)
+check("налог при уточнённых расходах", TAX_ACTUAL, 33084, tol=2)
 gap_2026 = TAX_ACTUAL - Z_ACTUAL
-check("разрыв за 2026", gap_2026, 1456, tol=2)
+check("разрыв за 2026", gap_2026, 2304, tol=2)
 _marg = (compute(REVENUE + 1000, EXP_ACTUAL)["total"] - TAX_ACTUAL) / 1000
-check("июльская доплата 2027 с грос-апом", gap_2026 / (1 - _marg), 2935, tol=10)
-check("запас до потолка 10 000", 10000 - gap_2026 / (1 - _marg), 7065, tol=10)
+check("июльская доплата 2027 с грос-апом", gap_2026 / (1 - _marg), 4725, tol=10)
+check("запас до потолка 10 000", 10000 - gap_2026 / (1 - _marg), 5275, tol=10)
 note("доплата ~2 100 при потолке 10 000 — запас 7 900, вмешиваться не нужно")
 note("калькулятор для самостоятельного пересчёта: tools/doplata.html")
 note("компенсация ОТРИЦАТЕЛЬНАЯ: заложено 32 400 против налога 30 409. "
@@ -616,10 +618,10 @@ for extra in (1000, 3000):
           (HOLD_RATE * REVENUE - compute(REVENUE, EXP_ACTUAL + extra)["total"])
           - _over, saved, tol=1)
 _eff = TAX_ACTUAL / REVENUE
-check("фактическая ставка налога", _eff * 100, 31.4, tol=0.1, unit="%")
-check("завышение процента", (HOLD_RATE - _eff) * 100, 3.9, tol=0.2, unit="%")
+check("фактическая ставка налога", _eff * 100, 32.2, tol=0.1, unit="%")
+check("завышение процента", (HOLD_RATE - _eff) * 100, 3, tol=0.2, unit="%")
 check("заложено по её схеме", HOLD_RATE * REVENUE, 36213, tol=3)
-check("переплата за год", HOLD_RATE * REVENUE - TAX_ACTUAL, 3977, tol=4)
+check("переплата за год", HOLD_RATE * REVENUE - TAX_ACTUAL, 3129, tol=4)
 note("доплаты в июле 2027 не будет — наоборот, останется лишних ~5 200")
 note("переплата — не потеря: клиент платит её налог, не больше и не меньше. "
      "Меняется только когда деньги приходят — помесячно или летом")
@@ -650,9 +652,9 @@ def _raise_headroom(expenses: float) -> float:
 
 
 check("запас на повышение, расходы как есть", _raise_headroom(BIZ_EXPENSES) / 12,
-      847, tol=3)
+      682, tol=3)
 check("то же при расходах на 2 400 меньше",
-      _raise_headroom(BIZ_EXPENSES - 2400) / 12, 647, tol=3)
+      _raise_headroom(BIZ_EXPENSES - 2400) / 12, 482, tol=3)
 note("грос-ап примерно удваивает компенсацию, поэтому потолок 10 000 "
      "достигается при разрыве всего ~4 900, а не 10 000")
 note("выплата может вырасти с 7 000 до ~8 210 при тех же заложенных 2 700")
@@ -674,21 +676,21 @@ REG, BONUSES = REG_FIX, BONUSES_GROSS
 check("выручка = регулярные + премии + компенсация",
       REG + BONUSES + TAX_COMP, REVENUE_FIX, tol=1)
 own_reserve = TAX_NO_LIJF - TAX_COMP
-check("накопить на налог самой за год", own_reserve, 24603, tol=1)
-check("то же в месяц", own_reserve / 12, 2050, tol=1)
+check("накопить на налог самой за год", own_reserve, 25451, tol=1)
+check("то же в месяц", own_reserve / 12, 2121, tol=1)
 # Box 3 приходит ТЕМ ЖЕ начислением, но клиент его не компенсирует.
 from box3 import compute as _box3                                  # noqa: E402
 BOX3_INV, BOX3_SAV = 160_000, 30_000            # оценка на срез 1 января 2026
 box3_tax = _box3(BOX3_INV, BOX3_SAV)["tax"]
 check("налог Box 3 за 2026 (срез 1 января)", box3_tax, 2471, tol=2)
-check("всё годовое начисление", TAX_NO_LIJF + box3_tax, 34707, tol=3)
+check("всё годовое начисление", TAX_NO_LIJF + box3_tax, 35555, tol=3)
 note("клиент компенсирует Box 1 и ZVW с гонорара, но НЕ Box 3 на капитал")
 # Положение на 1 августа 2026: 7 месяцев из 12 начислено.
 accrued = (TAX_NO_LIJF + box3_tax) * 7 / 12
 BALANCES = 39172
-check("начислено всего к 1 августа", accrued, 20246, tol=5)
+check("начислено всего к 1 августа", accrued, 20741, tol=5)
 check("отнесено на резерв", BALANCES - EF_CURRENT, 19200, tol=1)
-check("резерв против начисления", (BALANCES - EF_CURRENT) - accrued, -1046, tol=5)
+check("резерв против начисления", (BALANCES - EF_CURRENT) - accrued, -1541, tol=5)
 note("опережение по Box 1 (компенсация пришла лумпом в июле) съедено Box 3 — "
      "резерв идёт вровень, а не с запасом")
 note("belastingrente: voorlopige не подаётся, поэтому декларацию за 2026 "
@@ -697,7 +699,7 @@ note("belastingrente: voorlopige не подаётся, поэтому декл�
 BASE_2026, TOP_THRESHOLD = 80841, 78426
 check("сколько базы над порогом верхней ставки", BASE_2026 - TOP_THRESHOLD,
       2415, tol=1)
-check("эффективная ставка от выручки", TAX_NO_LIJF / REVENUE * 100, 31.4,
+check("эффективная ставка от выручки", TAX_NO_LIJF / REVENUE * 100, 32.2,
       tol=0.1, unit="%")
 # Лестница экономии считается вживую движком tax_zzp (импортирован в блоке 5),
 # а не переписывается числами: поменяется шкала — расхождение вылезет здесь.

@@ -122,25 +122,30 @@ def arbeidskorting(arbeidsinkomen: float) -> float:
     return max(0.0, AK_MAX - (arbeidsinkomen - AK_TOP) * AK_RATE)
 
 
-def compute(revenue: float, expenses: float, lijfrente: float = 0.0) -> dict:
-    profit = revenue - expenses
+def compute(revenue: float, expenses: float, lijfrente: float = 0.0,
+            kia: float = 0.0) -> dict:
+    profit = revenue - expenses - kia
     after_zelf = max(0.0, profit - ZELFSTANDIGENAFTREK - STARTERSAFTREK)
     after_mkb = after_zelf * (1 - MKB_VRIJSTELLING)
     base = max(0.0, after_mkb - lijfrente)
 
-    # вычеты, чью ставку ограничивает tariefsaanpassing
+    # вычеты, чью ставку ограничивает tariefsaanpassing: ondernemersaftrek
+    # и MKB-winstvrijstelling. KIA — investeringsaftrek, в список НЕ входит.
     posten = (profit - after_mkb) if profit > after_mkb else 0.0
     correctie = TARIEFSAANPASSING * min(
         posten, max(0.0, base + posten - TARIEF_THRESHOLD))
 
     it = income_tax(base) + correctie
     ahk = algemene_heffingskorting(base)
-    ak = arbeidskorting(after_mkb)
+    # ВАЖНО: arbeidsinkomen для arbeidskorting — прибыль ДО ondernemersaftrek
+    # и ДО MKB-winstvrijstelling (после KIA). Подтверждено декларацией 2025:
+    # 81 110 − 837 = 80 273 даёт 3 177 при 3 178 в декларации.
+    ak = arbeidskorting(profit)
     it_net = max(0.0, it - ahk - ak)
     zvw = min(after_mkb, ZVW_MAX_BASE) * ZVW_RATE
 
     return {
-        "revenue": revenue, "expenses": expenses, "profit": profit,
+        "revenue": revenue, "expenses": expenses, "kia": kia, "profit": profit,
         "after_zelf": after_zelf, "after_mkb": after_mkb, "base": base,
         "posten": posten, "correctie": correctie,
         "income_tax": it, "ahk": ahk, "ak": ak, "income_tax_net": it_net,

@@ -29,12 +29,16 @@ KOSTEN = 7_068          # andere kosten
 WINST = 81_110          # subtotaal, сходится: 91 156 − 2 978 − 7 068
 
 KIA_RATE = 0.28         # 2025: 28 % при инвестициях 2 901 — 70 602
-KIA = round(ACTIVA * KIA_RATE)
+KIA = 837          # из декларации (28 % от 2 978 даёт 834 — округление)
 
 # Из декларации — то, с чем сверяемся:
 DECL_BASE = 66_068      # belastbare winst
-DECL_BOX1 = 19_800      # 20 677 минус Box 3 877
+DECL_BOX1 = 20_677      # см. ниже: это Box 1, Box 3 877 идёт отдельно
 DECL_ZVW = 3_475
+DECL_KIA = 837
+DECL_CORRECTIE = 415
+DECL_AHK = 682
+DECL_AK = 3_178
 
 
 def scale(base: float) -> float:
@@ -100,15 +104,24 @@ def main() -> None:
         posten, max(0.0, base + posten - P["TARIEF_THRESHOLD"]))
 
     it = scale(base)
-    k_ahk, k_ak = ahk(base), ak(base)
+    # arbeidsinkomen — прибыль ДО ondernemersaftrek и MKB, после KIA
+    arbeidsinkomen = WINST - KIA
+    k_ahk, k_ak = ahk(base), ak(arbeidsinkomen)
     box1 = max(0.0, it + correctie - k_ahk - k_ak)
     zvw = min(base, P["ZVW_MAX_BASE"]) * P["ZVW_RATE"]
 
     print(f"  Налог по шкале                      {f(it)}")
     print(f"  + tariefsaanpassing {P['TARIEFSAANPASSING']:.2%}"
           f"           {f(correctie)}")
+    print(f"    в декларации                      {f(DECL_CORRECTIE)}"
+          f"   расхождение {correctie - DECL_CORRECTIE:+.0f}")
     print(f"  − algemene heffingskorting          {f(-k_ahk)}")
-    print(f"  − arbeidskorting                    {f(-k_ak)}")
+    print(f"    в декларации                      {f(-DECL_AHK)}"
+          f"   расхождение {DECL_AHK - k_ahk:+.0f}")
+    print(f"  − arbeidskorting <- от {arbeidsinkomen:,}".replace(",", " ")
+          + " " * 12 + f"{f(-k_ak)}")
+    print(f"    в декларации                      {f(-DECL_AK)}"
+          f"   расхождение {DECL_AK - k_ak:+.0f}")
     print("  " + "-" * 66)
     print(f"  BOX 1                               {f(box1)}")
     print(f"    в декларации                      {f(DECL_BOX1)}"

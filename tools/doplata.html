@@ -328,7 +328,9 @@ details[open] summary::before{content:"– "}
     const posten=Math.max(0, profit-afterMkb);
     const corr=TA*Math.min(posten, Math.max(0, base+posten-TA_THRESHOLD));
     const it=scaleTax(base)+corr;
-    const a1=ahk(base), a2=ak(afterMkb);
+    // arbeidsinkomen — прибыль ДО ondernemersaftrek и MKB.
+    // Подтверждено декларацией 2025: расхождение 1 евро.
+    const a1=ahk(base), a2=ak(profit);
     const itNet=Math.max(0, it-a1-a2);
     const zvw=Math.min(afterMkb, ZVW_CAP)*ZVW_RATE;
     return {profit, afterZelf, afterMkb, base, posten, corr, it, ahk:a1, ak:a2, itNet, zvw, total:itNet+zvw};
