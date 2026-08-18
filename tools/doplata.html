@@ -217,7 +217,8 @@ details[open] summary::before{content:"– "}
         <div class="lrow"><div class="n">Налог на гонорар <em id="lBareNote">его и компенсирует клиент</em></div><div class="v num" id="lBare">37 601</div></div>
         <div class="lrow neg"><div class="n">Заложено вами за год <em id="lZnote2">удержано с поступлений</em></div><div class="v num" id="lZ2">−36 319</div></div>
         <div class="lrow key"><div class="n" id="lBufName">Не хватает до налога на гонорар</div><div class="v num" id="lBuf">1 282</div></div>
-        <div class="lrow sum"><div class="n">Доплата в июле <em id="lGrossNote">без грос-апа: налог с неё подберёт следующий цикл</em></div><div class="v num" id="lGross">1 282</div></div>
+        <div class="lrow"><div class="n">Налог с самой доплаты <em id="lGrossNote">предельная ставка 50,4 %</em></div><div class="v num" id="lCorrPay">1 303</div></div>
+        <div class="lrow sum"><div class="n">Доплата в июле <em>это и есть цифра наверху</em></div><div class="v num" id="lGross">2 585</div></div>
       </div>
 
       <div class="ledger">
@@ -225,7 +226,7 @@ details[open] summary::before{content:"– "}
         <div class="lrow"><div class="n">Удержано в резерв</div><div class="v num" id="cZ">36 319</div></div>
         <div class="lrow neg"><div class="n">Ваш фактический налог</div><div class="v num" id="cTax">−33 325</div></div>
         <div class="lrow"><div class="n">Остаток резерва <em>уже у вас</em></div><div class="v num" id="cRest">2 994</div></div>
-        <div class="lrow"><div class="n">Доплата <em>придёт в июле</em></div><div class="v num" id="cPayNet">1 282</div></div>
+        <div class="lrow"><div class="n">Доплата минус налог с неё <em>придёт в июле</em></div><div class="v num" id="cPayNet">1 282</div></div>
         <div class="lrow key"><div class="n">Итого у вас</div><div class="v num" id="cTotal">4 276</div></div>
         <div class="lrow sum"><div class="n">Ваша формула: расходы × предельная ставка</div><div class="v num" id="cFormula">4 276</div></div>
       </div>
@@ -444,12 +445,11 @@ details[open] summary::before{content:"– "}
     const marg=(tax(revenue+1000, 0, 0).total - bare.total)/1000;
     set('sMarg', (marg*100).toFixed(1).replace('.',',')+' %');
 
-    // Грос-апа НЕТ: доплата войдёт в выручку следующего года, и налог с неё
-    // окажется внутри базы клиента в следующем же цикле. Гросс-ап был бы
-    // двойным счётом — проверено: без него резерв в точности равен налогу
-    // на гонорар, и у неё остаётся ровно выгода от расходов.
-    const payout = gap>0 ? gap : 0;
-    const payoutNet = payout;
+    // Грос-ап НУЖЕН: налог с любого поступления берётся в момент поступления.
+    // Иначе она платит его вперёд из своих, а компенсацию получает через год —
+    // а договорённость не про то, чтобы она кредитовала клиента.
+    const payout = gap>0 ? gap/(1-marg) : 0;
+    const payoutNet = payout*(1-marg);
     set('cZ', f(Z));
     set('cTax', '−'+f(r.total));
     set('cRest', f(Z-r.total));
@@ -458,10 +458,11 @@ details[open] summary::before{content:"– "}
     set('cFormula', f(expenses*marg));
 
     set('lGross', payout>0 ? f(payout) : '0');
-    set('lGrossNote', 'без грос-апа: доплата войдёт в выручку следующего года, и налог с неё окажется внутри базы клиента');
+    set('lCorrPay', payout>0 ? f(payout-gap) : '0');
+    set('lGrossNote', 'предельная ставка '+(marg*100).toFixed(1).replace('.',',')+' % — налог берётся сразу, а не через год');
     set('outComp', gap>0 ? f(payout) : '0');
     set('outNote', gap>0
-      ? ('Недобор до налога на гонорар. Грос-ап не нужен: налог с самой доплаты подберёт следующий цикл. Выгода от ваших расходов ('+f(benefit)+') в зачёт не идёт — она ваша.')
+      ? ('Недобор до налога на гонорар плюс налог с самой доплаты — иначе вы заплатите его вперёд из своих. Выгода от ваших расходов ('+f(benefit)+') в зачёт не идёт: она ваша.')
       : ('Заложено больше налога на гонорар на '+f(-gap)+' — доплачивать нечего.'));
 
     const pill=g('outPill'), fill=g('gFill');
@@ -478,7 +479,7 @@ details[open] summary::before{content:"– "}
       fill.style.background='var(--warn)';
     }
 
-    const maxGap=CEILING;
+    const maxGap=CEILING*(1-marg);
     set('sMaxGap', f(maxGap));
 
     // таблица: какой процент закладывать при какой выручке
