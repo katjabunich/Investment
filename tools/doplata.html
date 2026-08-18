@@ -131,15 +131,15 @@ details[open] summary::before{content:"– "}
   <div>
     <div class="card">
       <h2>Ежемесячная выплата</h2>
-      <p class="hint">Из чего состоит то, что приходит 1-го и 15-го</p>
+      <p class="hint">Из чего состоит то, что приходит 1-го и 15-го. Три поля внизу — про начало года, когда платили ещё 5 400: это январь и первая половина февраля, потому 1,5 месяца.</p>
       <div class="f"><label for="pay">Всего в месяц</label><input class="num" id="pay" type="number" value="7000" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="sal">Из них зарплата</label><input class="num" id="sal" type="number" value="4300" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="book">Из них бухгалтерия</label><input class="num" id="book" type="number" value="135" step="5"><span class="unit">€</span></div>
       <div class="f"><label for="mom">Из них маме</label><input class="num" id="mom" type="number" value="100" step="10"><span class="unit">€</span></div>
-      <div class="f"><label for="months">Месяцев по этой ставке</label><input class="num" id="months" type="number" value="10.5" step="0.5"><span class="unit">мес</span></div>
-      <div class="f"><label for="oldPay">До повышения — выплата</label><input class="num" id="oldPay" type="number" value="5400" step="50"><span class="unit">€</span></div>
-      <div class="f"><label for="oldSal">До повышения — зарплата</label><input class="num" id="oldSal" type="number" value="3700" step="50"><span class="unit">€</span></div>
-      <div class="f"><label for="oldMonths">Месяцев по старой ставке</label><input class="num" id="oldMonths" type="number" value="1.5" step="0.5"><span class="unit">мес</span></div>
+      <div class="f"><label for="months">Сколько месяцев так</label><input class="num" id="months" type="number" value="10.5" step="0.5"><span class="unit">мес</span></div>
+      <div class="f"><label for="oldPay">Было до повышения</label><input class="num" id="oldPay" type="number" value="5400" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="oldSal">Из них зарплата</label><input class="num" id="oldSal" type="number" value="3700" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="oldMonths">Сколько так было</label><input class="num" id="oldMonths" type="number" value="1.5" step="0.5"><span class="unit">мес</span></div>
       <div class="derived"><span>Вы удерживаете</span><b class="num" id="dRate">35,2 %</b><span style="flex:0;color:var(--faint);font-size:11px">со всех<br>поступлений</span></div>
       <div class="derived" style="border-top:0;padding-top:2px"><span>Заложено за год</span><b class="num" id="dTaxYear">36 319</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
       <p class="hint" style="margin:10px 0 0">Процент выводится из разбивки выплаты и применяется ко всем поступлениям, включая премии и доплату. От ваших расходов он не зависит.</p>
@@ -151,7 +151,7 @@ details[open] summary::before{content:"– "}
       <div class="f"><label for="prem">Премии за год</label><input class="num" id="prem" type="number" value="13603" step="100"><span class="unit">€</span></div>
       <div class="f"><label for="comp">Доплата, пришедшая в этом году</label><input class="num" id="comp" type="number" value="7633" step="100"><span class="unit">€</span></div>
       <div class="f"><label for="psyc">Возмещение психолога</label><input class="num" id="psyc" type="number" value="2161" step="50"><span class="unit">€</span></div>
-      <div class="f"><label for="owed">Недовыставлено в прошлом</label><input class="num" id="owed" type="number" value="1133" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="owed">Клиент недоплатил в прошлом</label><input class="num" id="owed" type="number" value="1133" step="50"><span class="unit">€</span></div>
     </div>
 
     <div class="card">
@@ -220,7 +220,7 @@ details[open] summary::before{content:"– "}
         <div class="lrow key"><div class="n" id="lBufName">Не хватает</div><div class="v num" id="lBuf">2 218</div></div>
         <div class="lrow"><div class="n">Налог с самой доплаты <em id="lGrossNote">предельная ставка 51,2 % — налог берётся сразу, а не через год</em></div><div class="v num" id="lCorrPay">2 331</div></div>
         <div class="lrow"><div class="n">Доплата за 2026</div><div class="v num" id="lGrossOnly">4 549</div></div>
-        <div class="lrow" id="rowOwed"><div class="n">Недовыставлено в прошлом <em>премия Q1 — 267, компенсация 2025 — 866. Обе из ваших же чисел</em></div><div class="v num" id="lOwed">1 225</div></div>
+        <div class="lrow" id="rowOwed"><div class="n">Недовыставлено в прошлом <em>счета, которые вы выставили меньше, чем следовало: премия Q1 — 267, компенсация за 2025 — 866</em></div><div class="v num" id="lOwed">1 225</div></div>
         <div class="lrow sum"><div class="n">Всего к счёту в июле <em>это и есть цифра наверху</em></div><div class="v num" id="lGross">5 774</div></div>
       </div>
 
