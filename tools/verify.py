@@ -388,8 +388,8 @@ GAP_ALL = BARE_ALL - Z_ALL
 check("НЕ ХВАТАЕТ", GAP_ALL, 1282, tol=5)
 _margA = (compute(REVENUE_ALL + 1000, 0.0)["total"] - BARE_ALL) / 1000
 check("предельная ставка на базе гонорара", _margA * 100, 50.4, tol=0.2, unit="%")
-check("ДОПЛАТА В ИЮЛЕ 2027 с грос-апом", GAP_ALL / (1 - _margA), 2585, tol=10)
-check("запас до потолка 10 000", 10000 - GAP_ALL / (1 - _margA), 7415, tol=10)
+check("ДОПЛАТА В ИЮЛЕ 2027 без грос-апа", GAP_ALL, 1282, tol=5)
+check("запас до потолка 10 000", 10000 - GAP_ALL, 8718, tol=5)
 note("наверху калькулятора стоит доплата С грос-апом, в выкладке — сам "
      "недобор; это одна и та же величина, разница только в налоге "
      "с самой доплаты")
@@ -410,7 +410,14 @@ check("налог на гонорар в процентах", BARE_ALL / REVENUE
 check("удержано в процентах", Z_ALL / REVENUE_ALL * 100, 34.6, tol=0.1, unit="%")
 check("разница процентов даёт недобор",
       (BARE_ALL / REVENUE_ALL - Z_ALL / REVENUE_ALL) * REVENUE_ALL, GAP_ALL, tol=1)
-check("налог с самой доплаты", GAP_ALL / (1 - _margA) - GAP_ALL, 1303, tol=6)
+note("ГРОС-АП НА ДОПЛАТУ СНЯТ — ОН БЫЛ ДВОЙНЫМ СЧЁТОМ")
+note("доплата войдёт в выручку следующего года, и налог с неё окажется "
+     "внутри базы клиента в следующем же цикле")
+check("резерв с доплатой равен налогу на гонорар", Z_ALL + GAP_ALL, BARE_ALL, tol=1)
+check("и тогда у неё остаётся ровно выгода от расходов",
+      Z_ALL + GAP_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"],
+      BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"], tol=1)
+note("с грос-апом было бы 2 585 — на 1 303 больше положенного")
 
 # --- lijfrente: выгода остаётся у неё --------------------------------------
 note("LIJFRENTE — ЛИЧНЫЙ ВЫЧЕТ, НА СЧЁТ КЛИЕНТУ НЕ ВЛИЯЕТ")
@@ -429,22 +436,21 @@ note("если бы взнос уменьшал базу клиента, нал�
 
 # --- сходится ли всё: вся выгода от расходов доходит до неё ----------------
 note("ПРОВЕРКА ДЕНЬГАМИ: ПОЧЕМУ ДОПЛАТА ТАКАЯ МАЛЕНЬКАЯ")
-_payout = GAP_ALL / (1 - _margA)
+_payout = GAP_ALL   # грос-апа нет: налог с доплаты подберёт следующий цикл
 _rest = Z_ALL - TAX_ALL if False else Z_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"]
 check("остаток резерва после уплаты налога", _rest, 2994, tol=4)
-check("от доплаты остаётся после налога с неё",
-      _payout * (1 - _margA), 1282, tol=5)
-check("итого остаётся у неё", _rest + _payout * (1 - _margA), 4276, tol=6)
+check("доплата в июле 2027", _payout, 1282, tol=5)
+check("итого остаётся у неё", _rest + _payout, 4276, tol=6)
 check("её формула: расходы x предельная ставка",
       EXP_ACTUAL * _margA, 4276, tol=6)
 check("и то же как разность налогов",
       BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"], 4276, tol=3)
 check("все три способа совпадают",
-      _rest + _payout * (1 - _margA),
+      _rest + _payout,
       BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"], tol=1)
 note("доплата мала потому, что 2 994 выгоды уже лежат в резерве: удержано "
      "36 319 против фактического налога 33 325. Доплата добавляет ровно "
-     "недостающие 1 282 нетто")
+     "недостающие 1 282")
 check("без доплаты недополучила бы",
       (BARE_ALL - compute(REVENUE_ALL, EXP_ACTUAL)["total"]) - _rest, 1282, tol=5)
 
