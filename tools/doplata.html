@@ -151,6 +151,7 @@ details[open] summary::before{content:"– "}
       <div class="f"><label for="prem">Премии за год</label><input class="num" id="prem" type="number" value="13603" step="100"><span class="unit">€</span></div>
       <div class="f"><label for="comp">Доплата, пришедшая в этом году</label><input class="num" id="comp" type="number" value="7633" step="100"><span class="unit">€</span></div>
       <div class="f"><label for="psyc">Возмещение психолога</label><input class="num" id="psyc" type="number" value="2161" step="50"><span class="unit">€</span></div>
+      <div class="f"><label for="owed">Недовыставлено в прошлом</label><input class="num" id="owed" type="number" value="1225" step="50"><span class="unit">€</span></div>
     </div>
 
     <div class="card">
@@ -218,7 +219,9 @@ details[open] summary::before{content:"– "}
         <div class="lrow neg"><div class="n">Заложено вами за год <em id="lZnote2">удержано 35,2 % после повышения и 27,1 % первые 1,5 мес — в среднем 34,6 %</em></div><div class="v num" id="lZ2">−36 319</div></div>
         <div class="lrow key"><div class="n" id="lBufName">Не хватает</div><div class="v num" id="lBuf">2 218</div></div>
         <div class="lrow"><div class="n">Налог с самой доплаты <em id="lGrossNote">предельная ставка 51,2 % — налог берётся сразу, а не через год</em></div><div class="v num" id="lCorrPay">2 331</div></div>
-        <div class="lrow sum"><div class="n">Доплата в июле <em>это и есть цифра наверху</em></div><div class="v num" id="lGross">4 549</div></div>
+        <div class="lrow"><div class="n">Доплата за 2026</div><div class="v num" id="lGrossOnly">4 549</div></div>
+        <div class="lrow" id="rowOwed"><div class="n">Недовыставлено в прошлом <em>компенсация 2025 — 958, премия Q1 — 267</em></div><div class="v num" id="lOwed">1 225</div></div>
+        <div class="lrow sum"><div class="n">Всего к счёту в июле <em>это и есть цифра наверху</em></div><div class="v num" id="lGross">5 774</div></div>
       </div>
 
       <div class="ledger">
@@ -450,7 +453,8 @@ details[open] summary::before{content:"– "}
     // Грос-ап НУЖЕН: налог с любого поступления берётся в момент поступления.
     // Иначе она платит его вперёд из своих, а компенсацию получает через год —
     // а договорённость не про то, чтобы она кредитовала клиента.
-    const payout = gap>0 ? gap/(1-marg) : 0;
+    const owed=val('owed');            // счета прошлых лет, недовыставленные
+    const payout = (gap>0 ? gap/(1-marg) : 0) + owed;
     const payoutNet = payout*(1-marg);
     set('cZ', f(Z));
     set('cTax', '−'+f(r.total));
@@ -459,6 +463,9 @@ details[open] summary::before{content:"– "}
     set('cTotal', f((Z-r.total)+payoutNet));
     set('cFormula', f(expenses*marg));
 
+    set('lGrossOnly', gap>0 ? f(gap/(1-marg)) : '0');
+    set('lOwed', f(owed));
+    if(g('rowOwed')) g('rowOwed').hidden = owed<=0;
     set('lGross', payout>0 ? f(payout) : '0');
     set('lCorrPay', payout>0 ? f(payout-gap) : '0');
     set('lGrossNote', 'предельная ставка '+(marg*100).toFixed(1).replace('.',',')+' % — налог берётся сразу, а не через год');
