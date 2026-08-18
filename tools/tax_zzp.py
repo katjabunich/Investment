@@ -52,33 +52,46 @@ import argparse
 #   начисления, и клиент её НЕ компенсирует — он компенсирует налог
 #   с гонорара. Оценка за 2026: ~2 500. См. docs/tax-reserve.md.
 #
-# --- параметры 2026 (СВЕРЕНЫ с belastingdienst.nl, август 2026) --------------------------------------
-# Все значения сверены с belastingdienst.nl и Belastingplan 2026 (август 2026).
-BRACKETS = [(38_883, 0.3575), (78_426, 0.3756), (float("inf"), 0.4950)]
-ZELFSTANDIGENAFTREK = 1_200      # 2025: 2 470 -> 2026: 1 200 -> 2027: 900
-STARTERSAFTREK = 0               # не начинающая: 3 года за первые 5 исчерпаны
-MKB_VRIJSTELLING = 0.127
+# --- параметры по годам (СВЕРЕНЫ с belastingdienst.nl) ----------------------
+# 2026 — август 2026. 2025 — сверено там же, нужно для проверки модели
+# на реальной декларации: она даёт независимую точку опоры.
+YEARS = {
+    2026: dict(
+        BRACKETS=[(38_883, 0.3575), (78_426, 0.3756), (float("inf"), 0.4950)],
+        ZELFSTANDIGENAFTREK=1_200,
+        STARTERSAFTREK=0,              # исчерпан
+        MKB_VRIJSTELLING=0.127,
+        ZVW_RATE=0.0485, ZVW_MAX_BASE=79_409,
+        AHK_MAX=3_115, AHK_START=29_736, AHK_RATE=0.06398, AHK_ZERO=78_426,
+        AK_MAX=5_685, AK_TOP=45_592, AK_RATE=0.06510, AK_ZERO=132_920,
+        TARIEFSAANPASSING=0.1194, TARIEF_THRESHOLD=78_426,
+    ),
+    2025: dict(
+        BRACKETS=[(38_441, 0.3582), (76_817, 0.3748), (float("inf"), 0.4950)],
+        ZELFSTANDIGENAFTREK=2_470,
+        STARTERSAFTREK=2_123,          # в 2025 ещё применялся
+        MKB_VRIJSTELLING=0.127,
+        ZVW_RATE=0.0526, ZVW_MAX_BASE=75_864,
+        AHK_MAX=3_068, AHK_START=28_406, AHK_RATE=0.06337, AHK_ZERO=76_817,
+        AK_MAX=5_599, AK_TOP=43_071, AK_RATE=0.06510, AK_ZERO=129_078,
+        TARIEFSAANPASSING=0.1202, TARIEF_THRESHOLD=76_817,
+    ),
+}
 
-# Bijdrage Zvw: база — belastbare winst ПОСЛЕ ondernemersaftrek и MKB.
-ZVW_RATE = 0.0485                # 2025: 5,26 % -> 2026: 4,85 %
-ZVW_MAX_BASE = 79_409            # 2025: 75 864 -> 2026: 79 409
-
-AHK_MAX = 3_115                  # algemene heffingskorting, 2025: 3 068
-AHK_START = 29_736               # выше этого убывает (по verzamelinkomen)
-AHK_RATE = 0.06398
-AHK_ZERO = 78_426
-
-AK_MAX = 5_685                   # arbeidskorting, 2025: 5 599
-AK_TOP = 45_592                  # где достигает максимума
-AK_RATE = 0.06510                # скорость убывания выше
-AK_ZERO = 132_920
-
-# Tariefsaanpassing (art. 2.10 lid 2 Wet IB 2001): вычеты, снижающие базу,
-# дают экономию максимум по ставке второй ступени 37,56 %. Разница 11,94 %
-# возвращается налогом. Под ограничение попадают ondernemersaftrek и
-# MKB-winstvrijstelling; взнос в lijfrente — нет, это иная категория.
-TARIEFSAANPASSING = 0.1194
-TARIEF_THRESHOLD = 78_426        # начало верхней ступени
+DEFAULT_YEAR = 2026
+_P = YEARS[DEFAULT_YEAR]
+BRACKETS = _P["BRACKETS"]
+ZELFSTANDIGENAFTREK = _P["ZELFSTANDIGENAFTREK"]
+STARTERSAFTREK = _P["STARTERSAFTREK"]
+MKB_VRIJSTELLING = _P["MKB_VRIJSTELLING"]
+ZVW_RATE = _P["ZVW_RATE"]
+ZVW_MAX_BASE = _P["ZVW_MAX_BASE"]
+AHK_MAX = _P["AHK_MAX"]; AHK_START = _P["AHK_START"]
+AHK_RATE = _P["AHK_RATE"]; AHK_ZERO = _P["AHK_ZERO"]
+AK_MAX = _P["AK_MAX"]; AK_TOP = _P["AK_TOP"]
+AK_RATE = _P["AK_RATE"]; AK_ZERO = _P["AK_ZERO"]
+TARIEFSAANPASSING = _P["TARIEFSAANPASSING"]
+TARIEF_THRESHOLD = _P["TARIEF_THRESHOLD"]
 
 BOX3_EFFECTIVE = 0.0216          # 6% вменённых x 36%
 

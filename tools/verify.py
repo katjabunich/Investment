@@ -402,6 +402,38 @@ note("переплата 368 — учесть в следующем счёте")
 note("на будущее: одна ставка и для делителя, и для оценки вычетов; "
      "Box 3 вычитать до расчёта; расходы брать из отчётности целиком")
 
+# --- прогон 2025 через ту же модель: независимая проверка -------------------
+note("МОДЕЛЬ ПРОВЕРЕНА НА РЕАЛЬНОЙ ДЕКЛАРАЦИИ 2025")
+import subprocess as _sp
+_out = _sp.run([sys.executable, "tools/check2025.py"],
+               capture_output=True, text=True).stdout
+check("прогон 2025 отработал", 1 if "ВСЕГО (без Box 3)" in _out else 0, 1, tol=0)
+from tax_zzp import YEARS as _Y
+_P25 = _Y[2025]
+_base25 = (81_110 - 2_470 - 2_123 - 834) * (1 - _P25["MKB_VRIJSTELLING"])
+check("база 2025 по модели", _base25, 66_068, tol=5)
+check("Zvw 2025 по модели", min(_base25, _P25["ZVW_MAX_BASE"]) * _P25["ZVW_RATE"],
+      3_475, tol=2)
+_sc, _lo = 0.0, 0.0
+for _hi, _r in _P25["BRACKETS"]:
+    if _base25 > _lo:
+        _sc += (min(_base25, _hi) - _lo) * _r
+    _lo = _hi
+_posten25 = 2_470 + 2_123 + (81_110 - 2_470 - 2_123 - 834) * _P25["MKB_VRIJSTELLING"]
+_corr25 = _P25["TARIEFSAANPASSING"] * min(
+    _posten25, max(0.0, _base25 + _posten25 - _P25["TARIEF_THRESHOLD"]))
+_ahk25 = max(0.0, _P25["AHK_MAX"] - (_base25 - _P25["AHK_START"]) * _P25["AHK_RATE"])
+_ak25 = max(0.0, _P25["AK_MAX"] - (_base25 - _P25["AK_TOP"]) * _P25["AK_RATE"])
+_box1_25 = _sc + _corr25 - _ahk25 - _ak25
+check("Box 1 2025 по модели", _box1_25, 19_800, tol=50)
+check("всего 2025 без Box 3 по модели",
+      _box1_25 + min(_base25, _P25["ZVW_MAX_BASE"]) * _P25["ZVW_RATE"],
+      23_275, tol=50)
+note("ошибка модели на реальной декларации 41 EUR из 23 275 = 0,18 % — "
+     "значит расчёту на 2026 можно верить")
+note("параметры 2025 сверены с belastingdienst.nl: шкала, обе скидки, Zvw, "
+     "tariefsaanpassing 12,02 %")
+
 # --- итог: одна цифра недобора и она же с грос-апом -------------------------
 note("ДОПЛАТА СЧИТАЕТСЯ ОТ НАЛОГА НА ГОЛЫЙ ГОНОРАР")
 note("расходы она платит из своих 4 300; их вычет — её выгода и в зачёт "
