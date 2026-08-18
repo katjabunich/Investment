@@ -140,8 +140,8 @@ details[open] summary::before{content:"– "}
       <div class="f"><label for="oldPay">До повышения — выплата</label><input class="num" id="oldPay" type="number" value="5400" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="oldSal">До повышения — зарплата</label><input class="num" id="oldSal" type="number" value="3700" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="oldMonths">Месяцев по старой ставке</label><input class="num" id="oldMonths" type="number" value="1.5" step="0.5"><span class="unit">мес</span></div>
-      <div class="derived"><span>Вы удерживаете</span><b class="num" id="dRate">36,6 %</b><span style="flex:0;color:var(--faint);font-size:11px">со всех<br>поступлений</span></div>
-      <div class="derived" style="border-top:0;padding-top:2px"><span>Заложено за год</span><b class="num" id="dTaxYear">38 561</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
+      <div class="derived"><span>Вы удерживаете</span><b class="num" id="dRate">35,2 %</b><span style="flex:0;color:var(--faint);font-size:11px">со всех<br>поступлений</span></div>
+      <div class="derived" style="border-top:0;padding-top:2px"><span>Заложено за год</span><b class="num" id="dTaxYear">36 319</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
       <p class="hint" style="margin:10px 0 0">Процент выводится из разбивки выплаты и применяется ко всем поступлениям, включая премии и доплату. От ваших расходов он не зависит.</p>
     </div>
 
@@ -161,7 +161,7 @@ details[open] summary::before{content:"– "}
       <div class="f"><label for="subs">Подписки и софт</label><input class="num" id="subs" type="number" value="1458" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="decl">Бухгалтерия и декларация</label><input class="num" id="decl" type="number" value="424" step="50"><span class="unit">€</span></div>
       <div class="f"><label for="other">Прочее и техника</label><input class="num" id="other" type="number" value="0" step="100"><span class="unit">€</span></div>
-      <div class="derived"><span>Всего расходов</span><b class="num" id="dExp">8 482</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
+      <div class="derived"><span>Всего расходов</span><b class="num" id="dExp">8 515</b><span style="flex:0;color:var(--faint);font-size:11px">€</span></div>
     </div>
 
     <div class="card">
@@ -178,8 +178,8 @@ details[open] summary::before{content:"– "}
       <div class="rhead">
         <div>
           <div class="rlabel">Доплата от клиента следующим летом</div>
-          <div class="rbig num" id="outComp">2 200</div>
-          <p class="rnote" id="outNote">Разрыв 1 073, увеличенный на налог с самой доплаты.</p>
+          <div class="rbig num" id="outComp">4 549</div>
+          <p class="rnote" id="outNote">Недобор до налога на гонорар плюс налог с самой доплаты — иначе вы заплатите его вперёд из своих. Выгода от ваших расходов (4 363) в зачёт не идёт: она ваша.</p>
         </div>
         <div class="pill ok" id="outPill"><i></i><span id="outPillText">Под 10 000</span></div>
       </div>
@@ -190,52 +190,52 @@ details[open] summary::before{content:"– "}
       </div>
 
       <div class="ledger">
-        <div class="lrow"><div class="n">Регулярные выплаты <em id="lRegNote">7 000 × 12</em></div><div class="v num" id="lReg">84 000</div></div>
+        <div class="lrow"><div class="n">Регулярные выплаты <em id="lRegNote">7 000 × 10,5 + 5 400 × 1,5</em></div><div class="v num" id="lReg">81 600</div></div>
         <div class="lrow"><div class="n">Премии</div><div class="v num" id="lPrem">13 603</div></div>
         <div class="lrow"><div class="n">Доплата, пришедшая в этом году <em>тоже облагается</em></div><div class="v num" id="lComp">7 633</div></div>
-        <div class="lrow sum"><div class="n">Выручка</div><div class="v num" id="lRev">105 236</div></div>
+        <div class="lrow sum"><div class="n">Выручка</div><div class="v num" id="lRev">104 997</div></div>
 
-        <div class="lrow neg"><div class="n">Деловые расходы</div><div class="v num" id="lExp">−8 482</div></div>
-        <div class="lrow sum"><div class="n">Прибыль</div><div class="v num" id="lProfit">96 754</div></div>
+        <div class="lrow neg"><div class="n">Деловые расходы</div><div class="v num" id="lExp">−8 515</div></div>
+        <div class="lrow sum"><div class="n">Прибыль</div><div class="v num" id="lProfit">96 482</div></div>
 
         <div class="lrow neg"><div class="n">Zelfstandigenaftrek <em>требует 1 225 часов в год</em></div><div class="v num">−1 200</div></div>
-        <div class="lrow neg"><div class="n">MKB-winstvrijstelling 12,7 %</div><div class="v num" id="lMkb">−12 133</div></div>
-        <div class="lrow neg" id="rowLijf" hidden><div class="n">Взнос в lijfrente</div><div class="v num" id="lLijf">0</div></div>
-        <div class="lrow sum"><div class="n">Налогооблагаемая база</div><div class="v num" id="lBase">83 421</div></div>
+        <div class="lrow neg"><div class="n">MKB-winstvrijstelling 12,7 %</div><div class="v num" id="lMkb">−12 101</div></div>
+        <div class="lrow neg" id="rowLijf" hidden><div class="n">Взнос в lijfrente</div><div class="v num" id="lLijf">−0</div></div>
+        <div class="lrow sum"><div class="n">Налогооблагаемая база</div><div class="v num" id="lBase">83 181</div></div>
 
-        <div class="lrow"><div class="n">Налог по шкале <em id="lLadder"></em></div><div class="v num" id="lIt">31 224</div></div>
-        <div class="lrow"><div class="n">Tariefsaanpassing 11,94 % <em id="lCorrNote">вычеты экономят максимум по 37,56 %, а не по 49,5 %</em></div><div class="v num" id="lCorr">1 556</div></div>
+        <div class="lrow"><div class="n">Налог по шкале <em id="lLadder">над порогом 78 426 — 4 755</em></div><div class="v num" id="lIt">31 107</div></div>
+        <div class="lrow"><div class="n">Tariefsaanpassing 11,94 % <em id="lCorrNote">вычеты 13 301 экономят по 37,56 %, а не по 49,5 %</em></div><div class="v num" id="lCorr">+1 588</div></div>
         <div class="lrow neg"><div class="n">Algemene heffingskorting</div><div class="v num" id="lAhk">0</div></div>
-        <div class="lrow neg"><div class="n">Arbeidskorting</div><div class="v num" id="lAk">−3 222</div></div>
-        <div class="lrow"><div class="n">Взнос Zvw 4,85 % <em id="lZvwNote">база ограничена 79 409</em></div><div class="v num" id="lZvw">3 851</div></div>
+        <div class="lrow neg"><div class="n">Arbeidskorting</div><div class="v num" id="lAk">−2 372</div></div>
+        <div class="lrow"><div class="n">Взнос Zvw 4,85 % <em id="lZvwNote">база упёрлась в потолок 79 409</em></div><div class="v num" id="lZvw">3 851</div></div>
 
-        <div class="lrow key"><div class="n">Ваш налог за год <em id="lEff">это то, что вы реально заплатите</em></div><div class="v num" id="lTax">33 325</div></div>
+        <div class="lrow key"><div class="n">Ваш налог за год <em id="lEff">это то, что вы реально заплатите — 32,5 % от выручки</em></div><div class="v num" id="lTax">34 174</div></div>
       </div>
 
       <div class="ledger">
         <p class="foot" style="margin:0 0 8px">Клиент компенсирует налог на <b>гонорар</b> — то есть посчитанный так, будто у вас нет ни деловых расходов, ни взноса в lijfrente. И то и другое ваш личный выбор, экономия от них ваша.</p>
-        <div class="lrow"><div class="n">Налог на гонорар <em id="lBareNote">его и компенсирует клиент</em></div><div class="v num" id="lBare">37 601</div></div>
-        <div class="lrow neg"><div class="n">Заложено вами за год <em id="lZnote2">удержано с поступлений</em></div><div class="v num" id="lZ2">−36 319</div></div>
-        <div class="lrow key"><div class="n" id="lBufName">Не хватает до налога на гонорар</div><div class="v num" id="lBuf">1 282</div></div>
-        <div class="lrow"><div class="n">Налог с самой доплаты <em id="lGrossNote">предельная ставка 50,4 %</em></div><div class="v num" id="lCorrPay">1 303</div></div>
-        <div class="lrow sum"><div class="n">Доплата в июле <em>это и есть цифра наверху</em></div><div class="v num" id="lGross">2 585</div></div>
+        <div class="lrow"><div class="n">Налог на гонорар <em id="lBareNote">его и компенсирует клиент — 36,7 % от поступлений</em></div><div class="v num" id="lBare">38 537</div></div>
+        <div class="lrow neg"><div class="n">Заложено вами за год <em id="lZnote2">удержано 35,2 % после повышения и 27,1 % первые 1,5 мес — в среднем 34,6 %</em></div><div class="v num" id="lZ2">−36 319</div></div>
+        <div class="lrow key"><div class="n" id="lBufName">Не хватает</div><div class="v num" id="lBuf">2 218</div></div>
+        <div class="lrow"><div class="n">Налог с самой доплаты <em id="lGrossNote">предельная ставка 51,2 % — налог берётся сразу, а не через год</em></div><div class="v num" id="lCorrPay">2 331</div></div>
+        <div class="lrow sum"><div class="n">Доплата в июле <em>это и есть цифра наверху</em></div><div class="v num" id="lGross">4 549</div></div>
       </div>
 
       <div class="ledger">
         <p class="foot" style="margin:0 0 8px">Проверка: вся выгода от расходов доходит до вас. Доплата выглядит маленькой потому, что часть выгоды вы уже держите в резерве — вы удержали больше, чем ваш фактический налог.</p>
         <div class="lrow"><div class="n">Удержано в резерв</div><div class="v num" id="cZ">36 319</div></div>
-        <div class="lrow neg"><div class="n">Ваш фактический налог</div><div class="v num" id="cTax">−33 325</div></div>
-        <div class="lrow"><div class="n">Остаток резерва <em>уже у вас</em></div><div class="v num" id="cRest">2 994</div></div>
-        <div class="lrow"><div class="n">Доплата минус налог с неё <em>придёт в июле</em></div><div class="v num" id="cPayNet">1 282</div></div>
-        <div class="lrow key"><div class="n">Итого у вас</div><div class="v num" id="cTotal">4 276</div></div>
-        <div class="lrow sum"><div class="n">Ваша формула: расходы × предельная ставка</div><div class="v num" id="cFormula">4 276</div></div>
+        <div class="lrow neg"><div class="n">Ваш фактический налог</div><div class="v num" id="cTax">−34 174</div></div>
+        <div class="lrow"><div class="n">Остаток резерва <em>уже у вас</em></div><div class="v num" id="cRest">2 145</div></div>
+        <div class="lrow"><div class="n">Доплата минус налог с неё <em>придёт в июле</em></div><div class="v num" id="cPayNet">2 218</div></div>
+        <div class="lrow key"><div class="n">Итого у вас</div><div class="v num" id="cTotal">4 363</div></div>
+        <div class="lrow sum"><div class="n">Ваша формула: расходы × предельная ставка</div><div class="v num" id="cFormula">4 363</div></div>
       </div>
 
       <div class="ledger">
         <p class="foot" style="margin:0 0 8px">А это остаётся у вас и на доплату не влияет:</p>
-        <div class="lrow"><div class="n">Выгода от деловых расходов</div><div class="v num" id="lBenefit">4 276</div></div>
+        <div class="lrow"><div class="n">Выгода от деловых расходов</div><div class="v num" id="lBenefit">4 363</div></div>
         <div class="lrow" id="rowLijfBen"><div class="n">Выгода от lijfrente <em>налог на гонорар она не трогает</em></div><div class="v num" id="lLijfBen">0</div></div>
-        <div class="lrow sum"><div class="n">Процент, который стоило бы закладывать <em id="lFairNote">сейчас удерживается 34,6 %</em></div><div class="v num" id="lFair">35,8 %</div></div>
+        <div class="lrow sum"><div class="n">Процент, который стоило бы закладывать <em id="lFairNote">сейчас удерживается 34,6 %</em></div><div class="v num" id="lFair">36,7 %</div></div>
       </div>
 
       <details>
@@ -245,7 +245,7 @@ details[open] summary::before{content:"– "}
           <div class="lrow"><div class="n">Вменённый доход <em>инвестиции 6,00 % · вклады 1,28 %</em></div><div class="v num" id="b3Rend">6 865</div></div>
           <div class="lrow sum"><div class="n">Налог Box 3, 36 %</div><div class="v num" id="b3Tax">2 471</div></div>
         </div>
-        <p class="foot" style="margin:4px 0 12px">Приходит тем же счётом в июне, но клиент его не компенсирует — это налог на ваш капитал, к работе он не относится. Итого к уплате: <b class="num" id="b3Total">34 324</b> €.</p>
+        <p class="foot" style="margin:4px 0 12px">Приходит тем же счётом в июне, но клиент его не компенсирует — это налог на ваш капитал, к работе он не относится. Итого к уплате: <b class="num" id="b3Total">36 646</b> €.</p>
       </details>
 
       <details open>
@@ -270,10 +270,10 @@ details[open] summary::before{content:"– "}
       <details>
         <summary>Что сдвинет результат</summary>
         <div class="ledger" style="padding-left:0;padding-right:0">
-          <div class="lrow"><div class="n">Предельная ставка на следующий евро</div><div class="v num" id="sMarg">49,5 %</div></div>
-          <div class="lrow"><div class="n">Разрыв может дорасти до <em>тогда доплата упрётся в 10 000</em></div><div class="v num" id="sMaxGap">4 920</div></div>
-          <div class="lrow"><div class="n">Премии могут вырасти до <em>при прочих равных</em></div><div class="v num" id="sMaxPrem">31 900</div></div>
-          <div class="lrow"><div class="n">Каждая 1 000 расходов уменьшает налог на</div><div class="v num" id="sPer1000">495</div></div>
+          <div class="lrow"><div class="n">Предельная ставка на следующий евро</div><div class="v num" id="sMarg">51,2 %</div></div>
+          <div class="lrow"><div class="n">Разрыв может дорасти до <em>тогда доплата упрётся в 10 000</em></div><div class="v num" id="sMaxGap">4 876</div></div>
+          <div class="lrow"><div class="n">Премии могут вырасти до <em>при прочих равных</em></div><div class="v num" id="sMaxPrem">29 466</div></div>
+          <div class="lrow"><div class="n">Каждая 1 000 расходов уменьшает налог на</div><div class="v num" id="sPer1000">512</div></div>
         </div>
       </details>
     </div>
